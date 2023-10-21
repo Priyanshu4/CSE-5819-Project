@@ -1,5 +1,5 @@
-__author__ = 'Tong Zhao'
-__email__ = 'tzhao2@nd.edu'
+__author__ = "Tong Zhao"
+__email__ = "tzhao2@nd.edu"
 
 import os
 import sys
@@ -11,6 +11,7 @@ from scipy.sparse import csr_matrix
 
 import torch.nn as nn
 import torch.nn.functional as F
+
 
 class Classification(nn.Module):
     def __init__(self, emb_size):
@@ -32,6 +33,7 @@ class Classification(nn.Module):
         x = F.elu_(self.fc2(x))
         logists = torch.log_softmax(x, 1)
         return logists
+
 
 class DeepFD(nn.Module):
     def __init__(self, features, feat_size, hidden_size, emb_size):
@@ -59,8 +61,11 @@ class DeepFD(nn.Module):
         recon = F.relu_(self.fc4(x_de))
         return embs, recon
 
-class Loss_DeepFD():
-    def __init__(self, features, graph_simi, device, alpha, beta, gamma):
+
+class Loss_DeepFD:
+    def __init__(
+        self, features, graph_simi, device, alpha, beta, gamma, negative_samples=10
+    ):
         self.features = features
         self.graph_simi = graph_simi
         self.device = device
@@ -70,6 +75,7 @@ class Loss_DeepFD():
         self.node_pairs = {}
         self.original_nodes_batch = None
         self.extended_nodes_batch = None
+        self.negative_samples = negative_samples
 
     def extend_nodes(self, nodes_batch, training_cps):
         self.original_nodes_batch = copy.deepcopy(nodes_batch)
@@ -93,7 +99,7 @@ class Loss_DeepFD():
         return loss
 
     def get_loss_simi(self, embs_batch):
-        node2index = {n:i for i,n in enumerate(self.extended_nodes_batch)}
+        node2index = {n: i for i, n in enumerate(self.extended_nodes_batch)}
         simi_feat = []
         simi_embs = []
         for node, cps in self.node_pairs.items():
