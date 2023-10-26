@@ -1,5 +1,14 @@
 from pathlib import Path
 import pickle
+import json
+
+CONFIGS_PATH = Path("configs")
+DATASET_PATHS_JSON = CONFIGS_PATH / "dataset_paths.json"
+
+
+def dataset_paths():
+    with open(DATASET_PATHS_JSON, "r") as f:
+        return json.load(f)
 
 
 class BasicDataset:
@@ -40,7 +49,7 @@ class PickleDataset(BasicDataset):
             raise ValueError(
                 "Number of labels does not match number of users from graph!"
             )
-        
+
     @property
     def n_users(self):
         return self._n_users
