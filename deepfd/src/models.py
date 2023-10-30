@@ -64,7 +64,7 @@ class DeepFD(nn.Module):
 
 class Loss_DeepFD:
     def __init__(
-        self, features, graph_simi, device, alpha, beta, gamma, negative_samples=10
+        self, features, graph_simi, device, alpha, beta, gamma
     ):
         self.features = features
         self.graph_simi = graph_simi
@@ -75,7 +75,6 @@ class Loss_DeepFD:
         self.node_pairs = {}
         self.original_nodes_batch = None
         self.extended_nodes_batch = None
-        self.negative_samples = negative_samples
 
     def extend_nodes(self, nodes_batch, training_cps):
         self.original_nodes_batch = copy.deepcopy(nodes_batch)

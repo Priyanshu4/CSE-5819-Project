@@ -39,7 +39,6 @@ class DataLoader:
             graph_simi = pickle.load(open(graph_simi_file, "rb"))
             self.logger.info("loaded similarity graph from cache")
         else:
-            print(np.arange(np.shape(graph_u2p)[0]))
             try:
                 graph_simi = np.zeros(np.shape(graph_u2u))
                 nz_entries = []
@@ -74,7 +73,7 @@ class DataLoader:
                     + f" See exception below:\n{str(e)}"
                     + "\nWill compute similarities lazily instead."
                 )
-                graph_simi = GraphSimilarity(graph_u2u)
+                graph_simi = GraphSimilarity(graph_u2p)
 
         assert len(labels) == np.shape(graph_u2p)[0] == np.shape(graph_u2u)[0]
         if ds == "alpha":
@@ -103,9 +102,10 @@ class DataLoader:
         g_u2u = getattr(self, self.ds + "_u2u")
         n = np.shape(g_u2u)[0]
         for i in range(n):
-            line = g_u2u[i].toarray().squeeze()
-            pos_pool = np.where(line != 0)[0]
-            neg_pool = np.where(line == 0)[0]
+            line = g_u2u[i]
+            pos_pool = line.nonzero()
+            all_indices = np.arange(g_u2u.shape[1])
+            neg_pool = np.setdiff1d(all_indices, pos_pool)
             if len(pos_pool) <= 10:
                 pos_nodes = pos_pool
             else:
@@ -118,6 +118,30 @@ class DataLoader:
                 training_cps[i].append((i, pos_n))
             for neg_n in neg_nodes:
                 training_cps[i].append((i, neg_n))
+            print(f"\r{i}", end="")
+        print("")
+        return training_cps
+
+    def get_train2(self):
+        training_cps = []
+        g_u2u = getattr(self, self.ds + "_u2u")
+        n = np.shape(g_u2u)[0]
+        for i in range(n):
+            line = g_u2u[i]
+            pos_pool = line.nonzero()
+            all_indices = np.arange(g_u2u.shape[1])
+            neg_pool = np.setdiff1d(all_indices, pos_pool)
+            if len(pos_pool) <= 10:
+                pos_nodes = pos_pool
+            else:
+                pos_nodes = np.random.choice(pos_pool, 10, replace=False)
+            if len(neg_pool) <= 10:
+                neg_nodes = neg_pool
+            else:
+                neg_nodes = np.random.choice(neg_pool, 10, replace=False)
+            training_cps.append((pos_nodes, neg_nodes))
+            print(f"\r{i}", end="")
+        print("")
         return training_cps
 
     def _split_data_cls(self, num_nodes, test_split=3, val_split=6):
