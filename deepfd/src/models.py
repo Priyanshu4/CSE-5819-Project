@@ -63,9 +63,7 @@ class DeepFD(nn.Module):
 
 
 class Loss_DeepFD:
-    def __init__(
-        self, features, graph_simi, device, alpha, beta, gamma
-    ):
+    def __init__(self, features, graph_simi, device, alpha, beta, gamma):
         self.features = features
         self.graph_simi = graph_simi
         self.device = device
@@ -83,10 +81,13 @@ class Loss_DeepFD:
 
         for node in nodes_batch:
             cps = training_cps[node]
-            self.node_pairs[node] = cps
-            for cp in cps:
-                self.extended_nodes_batch.add(cp[1])
+            self.node_pairs[node] = np.concatenate((cps[0], cps[1]))
+            for pos_node in cps[0]:
+                self.extended_nodes_batch.add(pos_node)
+            for neg_node in cps[1]:
+                self.extended_nodes_batch.add(neg_node)
         self.extended_nodes_batch = list(self.extended_nodes_batch)
+
         return self.extended_nodes_batch
 
     def get_loss(self, nodes_batch, embs_batch, recon_batch):
@@ -102,9 +103,11 @@ class Loss_DeepFD:
         simi_feat = []
         simi_embs = []
         for node, cps in self.node_pairs.items():
-            for i, j in cps:
-                simi_feat.append(torch.FloatTensor([self.graph_simi[i, j]]))
-                dis_ij = (embs_batch[node2index[i]] - embs_batch[node2index[j]]) ** 2
+            for pair_node in cps:
+                simi_feat.append(torch.FloatTensor([self.graph_simi[node, pair_node]]))
+                dis_ij = (
+                    embs_batch[node2index[node]] - embs_batch[node2index[pair_node]]
+                ) ** 2
                 dis_ij = torch.exp(-dis_ij.sum())
                 simi_embs.append(dis_ij.view(1))
         simi_feat = torch.cat(simi_feat, 0).to(self.device)

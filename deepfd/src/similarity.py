@@ -49,7 +49,7 @@ class GraphSimilarity:
         intersection_count = intersection.count()
 
         if intersection_count == 0:
-            simi_score = 1 / (len(union_count) + len(u1))
+            simi_score = 1 / (union_count + len(u1))
         elif intersection_count == union_count:
             simi_score = (union_count + len(u1) - 1) / (union_count + len(u1))
         else:

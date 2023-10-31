@@ -103,9 +103,9 @@ class DataLoader:
         n = np.shape(g_u2u)[0]
         for i in range(n):
             line = g_u2u[i]
-            pos_pool = line.nonzero()
-            all_indices = np.arange(g_u2u.shape[1])
-            neg_pool = np.setdiff1d(all_indices, pos_pool)
+            pos_pool = line.nonzero()[1]
+            pos_pool_set = set()
+            neg_pool = [x for x in range(n) if x not in pos_pool_set]
             if len(pos_pool) <= 10:
                 pos_nodes = pos_pool
             else:
@@ -114,6 +114,7 @@ class DataLoader:
                 neg_nodes = neg_pool
             else:
                 neg_nodes = np.random.choice(neg_pool, 10, replace=False)
+
             for pos_n in pos_nodes:
                 training_cps[i].append((i, pos_n))
             for neg_n in neg_nodes:
@@ -126,10 +127,10 @@ class DataLoader:
         training_cps = []
         g_u2u = getattr(self, self.ds + "_u2u")
         n = np.shape(g_u2u)[0]
+        all_indices = np.arange(g_u2u.shape[1])
         for i in range(n):
             line = g_u2u[i]
-            pos_pool = line.nonzero()
-            all_indices = np.arange(g_u2u.shape[1])
+            pos_pool = line.nonzero()[1]
             neg_pool = np.setdiff1d(all_indices, pos_pool)
             if len(pos_pool) <= 10:
                 pos_nodes = pos_pool
@@ -140,6 +141,27 @@ class DataLoader:
             else:
                 neg_nodes = np.random.choice(neg_pool, 10, replace=False)
             training_cps.append((pos_nodes, neg_nodes))
+            print(f"\r{i}", end="")
+        print("")
+        return training_cps
+
+    def get_train_fast(self):
+        """Assumes that there are few positive nodes for any node,
+        so a sample from all nodes will be mostly negative nodes.
+        """
+        training_cps = []
+        g_u2u = getattr(self, self.ds + "_u2u")
+        n = np.shape(g_u2u)[0]
+        all_indices = np.arange(g_u2u.shape[1])
+        for i in range(n):
+            line = g_u2u[i]
+            pos_pool = line.nonzero()[1]
+            if len(pos_pool) <= 10:
+                pos_nodes = pos_pool
+            else:
+                pos_nodes = np.random.choice(pos_pool, 10, replace=False)
+            mostly_neg_nodes = np.random.choice(all_indices, 10, replace=False)
+            training_cps.append((pos_nodes, mostly_neg_nodes))
             print(f"\r{i}", end="")
         print("")
         return training_cps

@@ -346,7 +346,7 @@ def train_model(Dl, args, logger, deepFD, model_loss, device, epoch):
     batches = math.ceil(len(train_nodes) / args.b_sz)
     visited_nodes = set()
     print("Getting training set")
-    training_cps = Dl.get_train()
+    training_cps = Dl.get_train_fast()
     logger.info("sampled pos and neg nodes for each node in this epoch.")
     for index in range(batches):
         nodes_batch = train_nodes[index * args.b_sz : (index + 1) * args.b_sz]
