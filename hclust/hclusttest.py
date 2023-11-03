@@ -46,6 +46,7 @@ if __name__ == "__main__":
         sys.exit(0)
         
     arg = sys.argv[-1]
+    print(f"Running {arg}")
 
     data = arg_dict[arg]
     
