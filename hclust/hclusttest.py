@@ -52,13 +52,15 @@ if __name__ == "__main__":
     
     clusterer = HClust(data)
 
-    path = os.path.join(run_folder, 'linkage.txt')
+    path = os.path.join(run_folder, 'linkage.')
     start = time.time()
     clusterer.generate_linkage_matrix()
     end = time.time()
     s = f"{end-start} seconds to create linkage matrix"
-    write_file(path, s)
-    
+    write_file(path+'txt', s)
+    with open(path+'pkl', 'wb') as file:
+       pickle.dump(clusterer.Z, file)
+
     """
     path = os.path.join(run_folder, 'dendrogram.txt')
     start = time.time()
