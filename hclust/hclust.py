@@ -42,7 +42,6 @@ class HClust:
         ax = fig.gca()
         dendrogram_info = dendrogram(self.Z, ax=ax)
         if filepath:
-            print(filepath)
             fig.savefig(filepath+'/dendrogram.png', dpi=300)
 
         return 1
