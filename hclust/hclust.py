@@ -60,12 +60,12 @@ class HClust:
 
         for row in self.Z:
             branch = []
-            self._find_leaves_helper(row, branch)
+            self._find_leaves_iterative(row, branch)
             leaves.append(branch)
         
         return leaves
 
-    def _find_leaves_helper(self, row, leaves=None):
+    def _find_leaves_recursive(self, row, leaves=None):
         """
         Recursive helper function for hclust to find all leaves under a specific branch
 
@@ -115,7 +115,7 @@ class HClust:
         if leaves is None:
             leaves = []
 
-        maxlen = int(self.Z[-1, -1])
+        maxlen = int(self.Z[-1, -1]) - 1
         stack = [(row, 0)]
 
         while stack:
