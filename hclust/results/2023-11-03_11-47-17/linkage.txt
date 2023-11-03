@@ -1,0 +1,1 @@
+72.71456861495972 seconds to create linkage matrix

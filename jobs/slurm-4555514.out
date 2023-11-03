@@ -1,0 +1,17 @@
+Running biclusters
+File 'results/2023-11-03_11-11-06/linkage.txt' has been successfully written.
+Traceback (most recent call last):
+  File "hclusttest.py", line 73, in <module>
+    leaves = clusterer.find_all_leaves()
+  File "/home/nns20006/5819/CSE-5819-Project/hclust/hclust.py", line 63, in find_all_leaves
+    self._find_leaves_helper(row, branch)
+  File "/home/nns20006/5819/CSE-5819-Project/hclust/hclust.py", line 98, in _find_leaves_helper
+    self._find_leaves_helper(newrow,leaves)
+  File "/home/nns20006/5819/CSE-5819-Project/hclust/hclust.py", line 98, in _find_leaves_helper
+    self._find_leaves_helper(newrow,leaves)
+  File "/home/nns20006/5819/CSE-5819-Project/hclust/hclust.py", line 98, in _find_leaves_helper
+    self._find_leaves_helper(newrow,leaves)
+  [Previous line repeated 994 more times]
+  File "/home/nns20006/5819/CSE-5819-Project/hclust/hclust.py", line 84, in _find_leaves_helper
+    maxlen = int(self.Z[-1, -1]) - 1
+RecursionError: maximum recursion depth exceeded while calling a Python object
