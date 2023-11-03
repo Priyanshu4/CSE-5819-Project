@@ -1,7 +1,7 @@
 from hclust import HClust
 import numpy as np
 from sklearn.datasets import make_blobs, make_biclusters
-import time, datetime, os, pickle, sys
+import time, datetime, os, pickle, sys, json
 
 results_folder = 'results'
 calling_directory = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     blobs, labels = make_blobs(n_samples=65000, n_features=10)
     biclusters, rows, cols = make_biclusters(shape=(65000,10), n_clusters=4)
 
-    arg_dict = {"small":small, "blobs":blobs, "bicluster":biclusters}
+    arg_dict = {"small":small, "blobs":blobs, "biclusters":biclusters}
 
     if len(sys.argv) < 2:
         print("Usage: python hclusttest.py <small/blobs/bicluster>")
@@ -58,13 +58,15 @@ if __name__ == "__main__":
     end = time.time()
     s = f"{end-start} seconds to create linkage matrix"
     write_file(path, s)
-
+    
+    """
     path = os.path.join(run_folder, 'dendrogram.txt')
     start = time.time()
     clusterer.generate_dendrogram(run_folder)
     end = time.time()
     s = f"{end-start} seconds to create dendrogram"
     write_file(path, s)
+    """
 
     path = os.path.join(run_folder, 'leaves.')
     start = time.time()
