@@ -1,0 +1,1 @@
+6.712265968322754 seconds to find all leaves
