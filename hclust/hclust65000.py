@@ -52,6 +52,7 @@ file_path = "results/"
 
 blobs, labels = make_blobs(n_samples=65000, n_features=10)
 
+
 start = time.time()
 linkage_matrix = linkage(blobs, method='average')
 endlinkage = time.time()
