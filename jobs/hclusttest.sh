@@ -14,4 +14,4 @@ conda activate lightgcn
 
 cd ../hclust
 
-python hclust6500.py
+python hclust65000.py
