@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "hclusttest.py", line 50, in <module>
+    data = arg_dict[arg]
+KeyError: 'biclusters'
