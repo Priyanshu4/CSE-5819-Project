@@ -12,7 +12,7 @@ def thread_task(start, end, result_list):
     for i in range(start, end):
         result_list.append(f(i))
 
-if __name__ == '__main':
+if __name__ == '__main__':
     result = []
     total_range = 240000000
 
