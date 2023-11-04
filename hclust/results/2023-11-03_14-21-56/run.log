@@ -1,0 +1,9 @@
+2023-11-03 14:21:56,272 - INFO - Running small
+2023-11-03 14:21:56,272 - INFO - generating linkage matrix
+2023-11-03 14:21:56,274 - INFO - 0.0017371177673339844 seconds to create linkage matrix
+2023-11-03 14:21:56,275 - INFO - File 'results/2023-11-03_14-21-56/linkage' has been successfully written.
+2023-11-03 14:21:56,275 - INFO - generating dendrogram
+2023-11-03 14:21:56,741 - INFO - 0.4658632278442383 seconds to create dendrogram
+2023-11-03 14:21:56,741 - INFO - starting leaves search
+2023-11-03 14:21:56,741 - INFO - 4.00543212890625e-05 seconds to find all leaves
+2023-11-03 14:21:56,741 - INFO - File 'results/2023-11-03_14-21-56/leaves' has been successfully written.

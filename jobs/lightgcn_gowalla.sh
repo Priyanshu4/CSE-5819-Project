@@ -8,8 +8,6 @@
 
 module purge
 
-module load slurm python/3.6.7 
-
 source /home/nns20006/miniconda3/etc/profile.d/conda.sh
 
 conda activate lightgcn
