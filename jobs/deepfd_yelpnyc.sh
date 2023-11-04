@@ -16,4 +16,4 @@ conda activate deepfd-env
 
 cd ../deepfd
 
-python -m src.main --cuda -1 --dataSet yelpnyc --cls_method dbscan
+python -m src.main --cuda -1 --dataSet yelpnyc --cls_method dbscan --save_embs 1
