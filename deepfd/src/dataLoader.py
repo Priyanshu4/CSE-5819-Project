@@ -23,6 +23,7 @@ class DataLoader:
         self.args = args
         self.logger = logger
         self.file_paths = json.load(open(f"{args.config_dir}/{args.file_paths}"))
+        print(self.file_paths)
         self.load_dataSet(args.dataSet)
 
     def load_dataSet(self, dataSet):
@@ -119,8 +120,6 @@ class DataLoader:
                 training_cps[i].append((i, pos_n))
             for neg_n in neg_nodes:
                 training_cps[i].append((i, neg_n))
-            print(f"\r{i}", end="")
-        print("")
         return training_cps
 
     def get_train2(self):
