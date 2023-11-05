@@ -16,11 +16,35 @@ def unpickle(file_name):
 # Example usage:
 file = "../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
 obj = unpickle(file)
-dimensions = obj.shape
-print(dimensions)
 large_matrix = obj.numpy()
 
 
 num_rows, num_cols = large_matrix.shape
 
 print(num_rows, num_cols)
+
+# Shuffle the row indices
+shuffled_indices = np.random.permutation(num_rows)
+
+# Calculate the number of rows for each group
+group_size = num_rows // 3
+
+# Split the shuffled indices into three equal-sized groups
+group1_indices = shuffled_indices[:group_size]
+group2_indices = shuffled_indices[group_size:2 * group_size]
+group3_indices = shuffled_indices[2 * group_size:]
+
+# Use the indices to split the matrix into three groups
+group1 = large_matrix[group1_indices]
+group2 = large_matrix[group2_indices]
+group3 = large_matrix[group3_indices]
+
+# Print the three groups
+print("Group 1:")
+print(group1.shape)
+
+print("\nGroup 2:")
+print(group2.shape)
+
+print("\nGroup 3:")
+print(group3.shape)
