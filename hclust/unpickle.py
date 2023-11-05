@@ -18,3 +18,9 @@ file = "../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
 obj = unpickle(file)
 dimensions = obj.shape
 print(dimensions)
+large_matrix = obj.numpy()
+
+
+num_rows, num_cols = large_matrix.shape
+
+print(num_rows, num_cols)
