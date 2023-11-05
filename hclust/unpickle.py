@@ -15,3 +15,5 @@ def unpickle(file_name):
 # Example usage:
 file = "/Users/niteeshsaravanan/Documents/GitHub/CSE-5819-Project/data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
 obj = unpickle(file)
+print(len(obj))
+print(type(obj))
