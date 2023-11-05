@@ -14,4 +14,4 @@ conda activate lightgcn
 
 cd ../hclust
 
-python hclustmp.py biclusters --data=biclusters
+python hclustmp.py --data=biclusters
