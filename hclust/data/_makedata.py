@@ -33,8 +33,7 @@ data = np.array([
     [16, 16, 15, 17]
 ])  
 
-blobs, labels = make_blobs(n_samples=65000, n_features=10)
-biclusters, rows, cols = make_biclusters(shape=(65000,10), n_clusters=4)
+blobs, labels = make_blobs(n_samples=165000, n_features=10)
+#biclusters, rows, cols = make_biclusters(shape=(65000,10), n_clusters=4)
 
-small = read_pickle("/Users/niteeshsaravanan/Documents/GitHub/CSE-5819-Project/hclust/data/small.pkl")
-print(data==small)
+write_pickle("/Users/niteeshsaravanan/Documents/GitHub/CSE-5819-Project/hclust/data/largeblobs.pkl", blobs)
