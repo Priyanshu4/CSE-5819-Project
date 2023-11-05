@@ -39,12 +39,3 @@ group1 = large_matrix[group1_indices]
 group2 = large_matrix[group2_indices]
 group3 = large_matrix[group3_indices]
 
-# Print the three groups
-print("Group 1:")
-print(group1.shape)
-
-print("\nGroup 2:")
-print(group2.shape)
-
-print("\nGroup 3:")
-print(group3.shape)

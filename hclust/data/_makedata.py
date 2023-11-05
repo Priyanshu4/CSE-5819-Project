@@ -1,7 +1,7 @@
 
-import pickle
-from sklearn.datasets import make_blobs, make_biclusters
 import numpy as np
+import pickle
+import torch
 
 
 def write_pickle(file_path, content):
@@ -21,19 +21,44 @@ def read_pickle(file_name):
     except Exception as e:
         print(f"An error occurred while loading the pickled object: {e}")
 
-data = np.array([
-    [1, 2, 3, 4],
-    [2, 2, 3, 3],
-    [2, 3, 4, 4],
-    [8, 8, 7, 8],
-    [9, 8, 8, 9],
-    [9, 9, 8, 10],
-    [15, 15, 14, 16],
-    [16, 15, 14, 17],
-    [16, 16, 15, 17]
-])  
 
-blobs, labels = make_blobs(n_samples=165000, n_features=2)
-#biclusters, rows, cols = make_biclusters(shape=(65000,10), n_clusters=4)
 
-write_pickle("/Users/niteeshsaravanan/Documents/GitHub/CSE-5819-Project/hclust/data/largeblobs", blobs)
+def unpickle(file_name):
+    try:
+        with open(file_name, "rb") as file:
+            loaded_object = pickle.load(file)
+            print("Successfully loaded the pickled object:")
+            return loaded_object
+    except FileNotFoundError:
+        print(f"File '{file_name}' not found.")
+    except Exception as e:
+        print(f"An error occurred while loading the pickled object: {e}")
+
+# Example usage:
+file = "../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
+obj = unpickle(file)
+large_matrix = obj.numpy()
+
+
+num_rows, num_cols = large_matrix.shape
+
+# Shuffle the row indices
+shuffled_indices = np.random.permutation(num_rows)
+
+# Calculate the number of rows for each group
+group_size = num_rows // 3
+
+# Split the shuffled indices into three equal-sized groups
+group1_indices = shuffled_indices[:group_size]
+group2_indices = shuffled_indices[group_size:2 * group_size]
+group3_indices = shuffled_indices[2 * group_size:]
+
+# Use the indices to split the matrix into three groups
+group1 = large_matrix[group1_indices]
+group2 = large_matrix[group2_indices]
+group3 = large_matrix[group3_indices]
+
+
+write_pickle("/YelpNYC/g1", group1)
+write_pickle("/YelpNYC/g2", group2)
+write_pickle("/YelpNYC/g3", group3)
