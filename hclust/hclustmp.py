@@ -94,17 +94,12 @@ if __name__ == "__main__":
 
 
     path = os.path.join(run_folder, 'leaves')
-
-    result, exec_time = time_method(clusterer, "find_all_leaves", *(    ))
-    print(f"{exec_time} seconds to find all leaves")
-
     num_cores = os.cpu_count()
     with Pool(num_cores) as p:
         start = time.time()
         result = p.map(find_leaves_wrapper, [(clusterer, row) for row in clusterer.Z])
         end = time.time()
-        logging.info(f"{end - start} seconds to find all leaves mp")
-        print(f"{end - start} seconds to find all leaves mp")
+        logging.info(f"{end - start} seconds to find all leaves")
         write_pickle(path, result)
 
 
