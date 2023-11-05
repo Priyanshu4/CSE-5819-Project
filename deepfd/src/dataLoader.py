@@ -140,8 +140,6 @@ class DataLoader:
             else:
                 neg_nodes = np.random.choice(neg_pool, 10, replace=False)
             training_cps.append((pos_nodes, neg_nodes))
-            print(f"\r{i}", end="")
-        print("")
         return training_cps
 
     def get_train_fast(self):
@@ -161,8 +159,6 @@ class DataLoader:
                 pos_nodes = np.random.choice(pos_pool, 10, replace=False)
             mostly_neg_nodes = np.random.choice(all_indices, 10, replace=False)
             training_cps.append((pos_nodes, mostly_neg_nodes))
-            print(f"\r{i}", end="")
-        print("")
         return training_cps
 
     def _split_data_cls(self, num_nodes, test_split=3, val_split=6):
