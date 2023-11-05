@@ -1,0 +1,1 @@
+/cm/local/apps/slurm/var/spool/job4578414/slurm_script: line 18: 3333995 Killed                  python hclustmp.py --data=largeblobs

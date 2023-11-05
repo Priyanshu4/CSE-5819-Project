@@ -1,3 +1,6 @@
 {
-    "data":"path/.pkl"
+    "small":"data/small.pkl",
+    "blobs":"data/blobs.pkl",
+    "biclusters":"data/biclusters.pkl",
+    "largeblobs":"data/largeblobs.pkl"
 }

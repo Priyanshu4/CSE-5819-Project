@@ -14,4 +14,4 @@ conda activate lightgcn
 
 cd ../hclust
 
-python hclusttest.py blobs
+python hclustmp.py --data=blobs

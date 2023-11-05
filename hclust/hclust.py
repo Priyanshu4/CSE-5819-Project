@@ -2,7 +2,6 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 import matplotlib.pyplot as plt
 
 
-
 class HClust:
     def __init__(self, data):
         self.data = data
