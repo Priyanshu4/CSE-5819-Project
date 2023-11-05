@@ -31,7 +31,7 @@ def write_pickle(file_path, content):
             pickle.dump(content, file)
         logging.info(f"File '{file_path}' has been successfully written.")
     except Exception as e:
-        logging.error(f"An error occurred while writing the file: {e}")
+        logging.error(f"An error occurred while writing {file_path}: {e}")
 
 
 if __name__ == "__main__":
