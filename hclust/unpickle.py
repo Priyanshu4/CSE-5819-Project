@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+import torch
 
 def unpickle(file_name):
     try:
@@ -15,5 +16,5 @@ def unpickle(file_name):
 # Example usage:
 file = "../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
 obj = unpickle(file)
-print(len(obj))
-print(type(obj))
+dimensions = obj.shape
+print(dimensions)
