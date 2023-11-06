@@ -12,6 +12,6 @@ source /home/nns20006/miniconda3/etc/profile.d/conda.sh
 
 conda activate lightgcn
 
-cd ../hclust/data
+cd ../hclust/data/YelpNYC
 
 python _makedata.py
