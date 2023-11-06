@@ -10,7 +10,7 @@ def write_pickle(file_path, content):
             pickle.dump(content, file, protocol=4)  
             print('yes')
     except Exception as e:
-        print('nono')
+        print(f'{e}')
 
 
 def read_pickle(file_name):
