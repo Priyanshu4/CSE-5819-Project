@@ -36,20 +36,13 @@ def unpickle(file_name):
         print(f"An error occurred while loading the pickled object: {e}")
 
 # Example usage:
-file = "../../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
+file = "../../../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
 obj = unpickle(file)
 large_matrix = obj.numpy()
 
 
 # Get the current working directory
 cwd = os.getcwd()
-
-# List all files and folders in the current working directory
-items_in_cwd = os.listdir(cwd)
-
-# Print the list of files and folders
-for item in items_in_cwd:
-    print(item)
 
 
 num_rows, num_cols = large_matrix.shape
@@ -71,6 +64,6 @@ group2 = large_matrix[group2_indices]
 group3 = large_matrix[group3_indices]
 
 
-write_pickle("/YelpNYC/g1", group1)
-write_pickle("/YelpNYC/g2", group2)
-write_pickle("/YelpNYC/g3", group3)
+write_pickle("g1", group1)
+write_pickle("g2", group2)
+write_pickle("g3", group3)
