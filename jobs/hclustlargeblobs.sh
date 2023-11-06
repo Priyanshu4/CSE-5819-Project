@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=niteesh.saravanan@uconn.edu      # Destination email address
-#SBATCH --mem=20G
+#SBATCH --mem=128G
 
 module purge
 
