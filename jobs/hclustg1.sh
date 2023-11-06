@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --partition=general-gpu
-
 #SBATCH -N 1
-
 #SBATCH -n 24
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=niteesh.saravanan@uconn.edu 
 
 module purge
 
@@ -14,4 +14,4 @@ conda activate lightgcn
 
 cd ../hclust
 
-python hclustmp.py --data=blobs
+python hclustmp.py --data=g1
