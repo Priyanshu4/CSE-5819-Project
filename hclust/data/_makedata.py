@@ -2,6 +2,7 @@
 import numpy as np
 import pickle
 import torch
+import os
 
 
 def write_pickle(file_path, content):
@@ -38,6 +39,17 @@ def unpickle(file_name):
 file = "../../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
 obj = unpickle(file)
 large_matrix = obj.numpy()
+
+
+# Get the current working directory
+cwd = os.getcwd()
+
+# List all files and folders in the current working directory
+items_in_cwd = os.listdir(cwd)
+
+# Print the list of files and folders
+for item in items_in_cwd:
+    print(item)
 
 
 num_rows, num_cols = large_matrix.shape
