@@ -1,10 +1,12 @@
 #!/bin/bash
 
-#SBATCH --partition=general-gpu
-
-#SBATCH -N 1
-
-#SBATCH -n 24
+#SBATCH --partition=general
+#SBATCH --ntasks=24
+#SBATCH --constraint='skylake'
+#SBATCH --nodes=1
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=niteesh.saravanan@uconn.edu      # Destination email address
+#SBATCH --mem=30G
 
 module purge
 
