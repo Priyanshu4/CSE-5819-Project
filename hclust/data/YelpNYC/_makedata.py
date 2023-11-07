@@ -67,3 +67,7 @@ group3 = large_matrix[group3_indices]
 write_pickle("g1", group1)
 write_pickle("g2", group2)
 write_pickle("g3", group3)
+
+write_pickle("g1_map", group1_indices)
+write_pickle("g2_map", group2_indices)
+write_pickle("g3_map", group3_indices)
