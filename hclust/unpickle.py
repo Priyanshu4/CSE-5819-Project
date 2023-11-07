@@ -22,8 +22,8 @@ large_matrix = obj.numpy()
 num_rows, num_cols = large_matrix.shape
 
 print(num_rows, num_cols)
-print(enumerate(large_matrix[0:10]))
-
+for item in enumerate(large_matrix[0:10]):
+    print(item)
 
 
 """
