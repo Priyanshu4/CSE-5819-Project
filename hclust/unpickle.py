@@ -22,7 +22,7 @@ large_matrix = obj.numpy()
 num_rows, num_cols = large_matrix.shape
 
 print(num_rows, num_cols)
-print(large_matrix[0])
+print(large_matrix[0:10])
 
 
 
