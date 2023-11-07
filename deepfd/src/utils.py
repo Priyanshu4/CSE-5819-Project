@@ -283,14 +283,19 @@ def test_dbscan(Dl, args, logger, deepFD, epoch):
     )
 
     # dbscan with different epsilon
-    epsilons = [0.5, 2, 5, 10]
+    epsilons = [0.001, 0.01, 0.05, 0.1, 0.5, 2, 5, 10]
     for ep in epsilons:
-        logists = cluster_optics_dbscan(
-            reachability=optics.reachability_,
-            core_distances=optics.core_distances_,
-            ordering=optics.ordering_,
-            eps=ep,
-        )
+        # logists = cluster_optics_dbscan(
+        #     reachability=optics.reachability_,
+        #     core_distances=optics.core_distances_,
+        #     ordering=optics.ordering_,
+        #     eps=ep,
+        # )
+
+        # Replaced optics with DBSCAN of different epsilons for more accuracy in DBSCAN results
+        dbscan = DBSCAN(eps=ep)
+        logists = dbscan.fit_predict(features) 
+
         logists[logists >= 0] = 0
         logists[logists < 0] = 1
         logger.info(f"evaluating with dbscan at {ep}")
