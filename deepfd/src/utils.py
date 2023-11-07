@@ -283,51 +283,58 @@ def test_dbscan(Dl, args, logger, deepFD, epoch):
     )
 
     # dbscan with different epsilon
-    epsilons = [0.5, 2, 5, 10]
+    epsilons = [0.001, 0.01, 0.05, 0.1, 0.5, 2, 5, 10]
+    min_samples_values = [1, 5, 10, 20]
     for ep in epsilons:
-        logists = cluster_optics_dbscan(
-            reachability=optics.reachability_,
-            core_distances=optics.core_distances_,
-            ordering=optics.ordering_,
-            eps=ep,
-        )
-        logists[logists >= 0] = 0
-        logists[logists < 0] = 1
-        logger.info(f"evaluating with dbscan at {ep}")
-        results = _eval(labels, logists, logists)
-        logger.info(
-            " pre  \t rec  \t  f1  \t  ap  \tpr_auc\troc_auc\t h_pre\t h_rec\t h_f1"
-        )
-        logger.info(
-            "{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}".format(
-                results["pre"],
-                results["rec"],
-                results["f1"],
-                results["ap"],
-                results["pr_auc"],
-                results["roc_auc"],
-                results["h_pre"],
-                results["h_rec"],
-                results["h_f1"],
+        # logists = cluster_optics_dbscan(
+        #     reachability=optics.reachability_,
+        #     core_distances=optics.core_distances_,
+        #     ordering=optics.ordering_,
+        #     eps=ep,
+        # )
+
+        for min_samples in min_samples_values:
+        # Replaced optics with DBSCAN of different epsilons for more accuracy in DBSCAN results
+            dbscan = DBSCAN(eps=ep, min_samples=min_samples)
+            logists = dbscan.fit_predict(features) 
+
+            logists[logists >= 0] = 0
+            logists[logists < 0] = 1
+            logger.info(f"evaluating with dbscan at {ep}")
+            results = _eval(labels, logists, logists)
+            logger.info(
+                " pre  \t rec  \t  f1  \t  ap  \tpr_auc\troc_auc\t h_pre\t h_rec\t h_f1"
             )
-        )
-        fa.write(f"DBSCAN at {ep}\n")
-        fa.write(
-            " pre  \t rec  \t  f1  \t  ap  \tpr_auc\troc_auc\t h_pre\t h_rec\t h_f1 \n"
-        )
-        fa.write(
-            "{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\n".format(
-                results["pre"],
-                results["rec"],
-                results["f1"],
-                results["ap"],
-                results["pr_auc"],
-                results["roc_auc"],
-                results["h_pre"],
-                results["h_rec"],
-                results["h_f1"],
+            logger.info(
+                "{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}".format(
+                    results["pre"],
+                    results["rec"],
+                    results["f1"],
+                    results["ap"],
+                    results["pr_auc"],
+                    results["roc_auc"],
+                    results["h_pre"],
+                    results["h_rec"],
+                    results["h_f1"],
+                )
             )
-        )
+            fa.write(f"DBSCAN at {ep}\n")
+            fa.write(
+                " pre  \t rec  \t  f1  \t  ap  \tpr_auc\troc_auc\t h_pre\t h_rec\t h_f1 \n"
+            )
+            fa.write(
+                "{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\n".format(
+                    results["pre"],
+                    results["rec"],
+                    results["f1"],
+                    results["ap"],
+                    results["pr_auc"],
+                    results["roc_auc"],
+                    results["h_pre"],
+                    results["h_rec"],
+                    results["h_f1"],
+                )
+            )
     fa.close()
 
 
