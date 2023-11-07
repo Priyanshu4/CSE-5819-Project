@@ -3,7 +3,7 @@
     "blobs":"data/blobs.pkl",
     "biclusters":"data/biclusters.pkl",
     "largeblobs":"data/largeblobs.pkl",
-    "g1":"data/YelpNYC/g1.pkl",
-    "g2":"data/YelpNYC/g2.pkl",
-    "g3":"data/YelpNYC/g3.pkl"
+    "g1":"data/YelpNYC/samples/g1.pkl",
+    "g2":"data/YelpNYC/samples/g2.pkl",
+    "g3":"data/YelpNYC/samples/g3.pkl"
 }
