@@ -1,6 +1,28 @@
+
 import numpy as np
 import pickle
 import torch
+import os
+
+
+def write_pickle(file_path, content):
+    try:
+        with open(file_path+".pkl", 'wb') as file:
+            pickle.dump(content, file, protocol=4)  
+            print('yes')
+    except Exception as e:
+        print(f'{e}')
+
+
+def read_pickle(file_name):
+    try:
+        with open(file_name, "rb") as file:
+            loaded_object = pickle.load(file)
+            return loaded_object
+    except Exception as e:
+        print(f"An error occurred while loading the pickled object: {e}")
+
+
 
 def unpickle(file_name):
     try:
@@ -14,14 +36,16 @@ def unpickle(file_name):
         print(f"An error occurred while loading the pickled object: {e}")
 
 # Example usage:
-file = "../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
+file = "../../../data/yelpnyc/embedded/deepfd/embs_ep10.pkl"
 obj = unpickle(file)
 large_matrix = obj.numpy()
 
 
-num_rows, num_cols = large_matrix.shape
+# Get the current working directory
+cwd = os.getcwd()
 
-print(num_rows, num_cols)
+
+num_rows, num_cols = large_matrix.shape
 
 # Shuffle the row indices
 shuffled_indices = np.random.permutation(num_rows)
@@ -39,3 +63,7 @@ group1 = large_matrix[group1_indices]
 group2 = large_matrix[group2_indices]
 group3 = large_matrix[group3_indices]
 
+
+write_pickle("g1", group1)
+write_pickle("g2", group2)
+write_pickle("g3", group3)

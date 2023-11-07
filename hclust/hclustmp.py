@@ -102,6 +102,7 @@ if __name__ == "__main__":
         logging.info(f"{end - start} seconds to find all leaves")
         write_pickle(path, result)
 
+    print('Completed :D')
 
 
     
