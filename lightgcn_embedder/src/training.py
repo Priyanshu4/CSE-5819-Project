@@ -70,17 +70,33 @@ def train_lightgcn(dataset: BasicDataset, model: LightGCN, loss):
     model_config = model.config
     device = model_config.device
     config = model_config.train_config
+    batch_size = config.batch_size
 
     # Get positive and negative samples
     pos_and_neg_samples = sample_train_set(dataset, config.n_pos_samples, config.n_neg_samples)
 
     # Get indices of all nodes in random order
     train_nodes = np.random.permutation(dataset.n_users)
-    n_batches = math.ceil(len(train_nodes) // config.batch_size)
+    n_batches = math.ceil(len(train_nodes) // batch_size)
 
     for i in range(n_batches):
-        
+        nodes_batch = train_nodes[i * batch_size: (i + 1) * batch_size]
+        samples = pos_and_neg_samples[nodes_batch]
 
+        # Add the nodes in this batch and the sampled nodes for this batch to visited set
+        visited_nodes |= set(nodes_batch)
+        visited_nodes |= set(samples.flatten())
+
+        # TODO: Actual training logic goes here
+
+        # stop when all nodes are trained
+        if len(visited_nodes) == len(train_nodes):
+            
+            if i < n_batches - 1:
+                # TODO: LOG MESSAGE THAT INDICATES ALL NODES DEALED
+                pass
+            
+            break
 
     pass 
 
@@ -134,9 +150,11 @@ def train_model(Dl, args, logger, deepFD, model_loss, device, epoch):
     training_cps = Dl.get_train()
     logger.info("sampled pos and neg nodes for each node in this epoch.")
     for index in range(batches):
-        nodes_batch = train_nodes[index * args.b_sz : (index + 1) * args.b_sz]
-        nodes_batch = np.asarray(model_loss.extend_nodes(nodes_batch, training_cps))
+        nodes_batch = train_nodes[index * args.batch_size : (index + 1) * args.batch_size]
+
+        # Add the nodes in this batch and the nodes 
         visited_nodes |= set(nodes_batch)
+        
 
         embs_batch, recon_batch = deepFD(nodes_batch)
         loss = model_loss.get_loss(nodes_batch, embs_batch, recon_batch)

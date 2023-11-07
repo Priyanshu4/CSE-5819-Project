@@ -7,7 +7,7 @@ import multiprocessing
 from similarity import GraphSimilarity
 import argparse
 from lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
-from loss import Loss_DeepFD
+from loss import SimilarityLoss
 
 if __name__ == "__main__":
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     )
 
     lightgcn = LightGCN(lightgcn_config, dataset)
-    loss = Loss_DeepFD(dataset, device, GraphSimilarity(dataset.graph_u2u), alpha=0, beta=0, gamma=0)
+    loss = SimilarityLoss(dataset, device, GraphSimilarity(dataset.graph_u2u), alpha=0, beta=0, gamma=0)
 
 
     for epoch in range(args.epochs):
