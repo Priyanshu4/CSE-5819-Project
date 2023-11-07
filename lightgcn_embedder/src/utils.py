@@ -12,18 +12,9 @@ import json
 import logging
 import sys
 from datetime import datetime
-try:
-    from cppimport import imp_from_filepath
-    from os.path import join, dirname
-    path = join(dirname(__file__), "sources/sampling.cpp")
-    sampling = imp_from_filepath(path)
-    sampling.seed(world.seed)
-    sample_ext = True
-except:
-    world.cprint("Cpp extension not loaded")
-    sample_ext = False
+from sampling import set_sampling_seed
 
-def getLogger(log_dir, log_config_file):
+def configure_logger(name, log_dir, log_config_file):
     config_dict = json.load(open(log_config_file))
 
     now = datetime.now()
@@ -33,7 +24,7 @@ def getLogger(log_dir, log_config_file):
     config_dict['handlers']['file_handler']['filename'] = log_file
 
     logging.config.dictConfig(config_dict)
-    logger = logging.getLogger("Logger")
+    logger = logging.getLogger(name)
 
     std_out_format = '%(asctime)s - [%(levelname)s] - %(message)s'
     consoleHandler = logging.StreamHandler(sys.stdout)
@@ -42,96 +33,12 @@ def getLogger(log_dir, log_config_file):
 
     return logger
 
-
-def UniformSample_original(dataset, neg_ratio = 1):
-    dataset : BasicDataset
-    allPos = dataset.allPos
-    start = time()
-    if sample_ext:
-        S = sampling.sample_negative(dataset.n_users, dataset.m_items,
-                                     dataset.trainDataSize, allPos, neg_ratio)
-    else:
-        S = UniformSample_original_python(dataset)
-    return S
-
-def UniformSample_original_python(dataset):
-    """
-    the original impliment of BPR Sampling in LightGCN
-    :return:
-        np.array
-    """
-    total_start = time()
-    dataset : BasicDataset
-    user_num = dataset.trainDataSize
-    users = np.random.randint(0, dataset.n_users, user_num)
-    allPos = dataset.allPos
-    S = []
-    sample_time1 = 0.
-    sample_time2 = 0.
-    for i, user in enumerate(users):
-        start = time()
-        posForUser = allPos[user]
-        if len(posForUser) == 0:
-            continue
-        sample_time2 += time() - start
-        posindex = np.random.randint(0, len(posForUser))
-        positem = posForUser[posindex]
-        while True:
-            negitem = np.random.randint(0, dataset.m_items)
-            if negitem in posForUser:
-                continue
-            else:
-                break
-        S.append([user, positem, negitem])
-        end = time()
-        sample_time1 += end - start
-    total = time() - total_start
-    return np.array(S)
-
-# ===================end samplers==========================
-# =====================utils====================================
-
 def set_seed(seed):
-    np.random.seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)
-
-def minibatch(*tensors, **kwargs):
-
-    batch_size = kwargs.get('batch_size', world.config['bpr_batch_size'])
-
-    if len(tensors) == 1:
-        tensor = tensors[0]
-        for i in range(0, len(tensor), batch_size):
-            yield tensor[i:i + batch_size]
-    else:
-        for i in range(0, len(tensors[0]), batch_size):
-            yield tuple(x[i:i + batch_size] for x in tensors)
-
-
-def shuffle(*arrays, **kwargs):
-
-    require_indices = kwargs.get('indices', False)
-
-    if len(set(len(x) for x in arrays)) != 1:
-        raise ValueError('All inputs to shuffle must have '
-                         'the same length.')
-
-    shuffle_indices = np.arange(len(arrays[0]))
-    np.random.shuffle(shuffle_indices)
-
-    if len(arrays) == 1:
-        result = arrays[0][shuffle_indices]
-    else:
-        result = tuple(x[shuffle_indices] for x in arrays)
-
-    if require_indices:
-        return result, shuffle_indices
-    else:
-        return result
-
+    set_sampling_seed(seed)
 
 class timer:
     """
