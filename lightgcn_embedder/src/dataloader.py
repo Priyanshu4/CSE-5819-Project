@@ -2,13 +2,39 @@ from pathlib import Path
 import pickle
 import json
 
-def dataset_paths(datasets_path_json: Path):
-    if not datasets_path_json.exists():
-        raise FileNotFoundError(f"Create a Datasets Path Config file at {datasets_path_json}!")
 
-    with open(datasets_path_json, "r") as f:
-        return json.load(f)
+class DataLoader:
 
+    def __init__(self, datasets_config_file: Path):
+        
+        if not datasets_config_file.exists():
+            raise FileNotFoundError(f"Create a Datasets Path Config file at {datasets_config_file}!")
+
+        self.datasets_config = json.load(open(datasets_config_file))
+
+    @property
+    def dataset_names(self):
+        return self.datasets_config.keys()
+
+    def load_dataset(self, dataset_name: str):
+        if dataset_name not in self.dataset_names:
+            raise ValueError(f"{dataset_name} is not a valid dataset.")
+        
+        dataset_config = self.datasets_config[dataset_name]
+
+        if "dataset_type" not in dataset_config.keys():
+            raise ValueError(f"dataset_type not specified for {dataset_name} dataset.")
+        
+        if dataset_config["dataset_type"] == "pickle":
+            dataset = PickleDataset(
+                u2i_pkl_path=self._dataset_paths[dataset_name]["graph_u2i"],
+                user_labels_pkl_path=self._dataset_paths[dataset_name]["labels"],
+            )
+        else:
+            raise ValueError(f"{dataset_config['dataset_type']} is not a valid dataset type.")
+
+        return dataset
+    
 class BasicDataset:
     @property
     def n_users(self):

@@ -1,6 +1,6 @@
 import utils
 import torch
-import dataloader
+from dataloader import DataLoader
 import multiprocessing
 from similarity import GraphSimilarity
 import argparse
@@ -10,13 +10,14 @@ import training
 from pathlib import Path
 
 CONFIGS_PATH = Path(__file__).parent / "configs"
-DATASET_PATHS_JSON = CONFIGS_PATH / "dataset_paths.json"
+DATASET_CONFIG = CONFIGS_PATH / "datasets.json"
 LOG_CONFIG = CONFIGS_PATH / "log_config.json"
 LOGS_PATH = Path(__file__).parent / "results" / "logs"
 
 if __name__ == "__main__":
 
-    dataset_paths = dataloader.dataset_paths(DATASET_PATHS_JSON)
+    dataloader = DataLoader(DATASET_CONFIG)
+    
     parser = argparse.ArgumentParser(description="Go lightGCN")
     parser.add_argument("--batch_size", type=int, default=2048, help="the batch size for training procedure")
     parser.add_argument("--recdim", type=int, default=64, help="the embedding size of lightGCN")
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--keepprob", type=float, default=0.6, help="the dropout keep prob")
     parser.add_argument("--a_fold", type=int, default=100, help="the fold num used to split large adj matrix")
     parser.add_argument("--testbatch", type=int, default=100, help="the batch size of users for testing")
-    parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataset_paths.keys()}")
+    parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataloader.dataset_names}")
     parser.add_argument("--path", type=str, default="./checkpoints", help="path to save weights")
     parser.add_argument("--topks", nargs="?", default="[20]", help="@k test list")
     parser.add_argument("--comment", type=str, default="lgn")
@@ -39,15 +40,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger = utils.configure_logger("Logger", LOGS_PATH, LOG_CONFIG)
-
-    if args.dataset not in dataset_paths.keys():
-        logger.error(f"{args.dataset} is not a valid dataset.")
-        raise ValueError(f"Invalid dataset selected. Options are {dataset_paths.keys()}")
-
-    dataset = dataloader.PickleDataset(
-        u2i_pkl_path=dataset_paths[args.dataset]["graph_u2i"],
-        user_labels_pkl_path=dataset_paths[args.dataset]["labels"],
-    )
+    dataset = dataloader.load_dataset(args.dataset)
 
     GPU = torch.cuda.is_available()
     device = torch.device("cuda" if GPU else "cpu")
@@ -64,7 +57,6 @@ if __name__ == "__main__":
         dropout = args.dropout,
         decay = args.decay
     )
-
 
     lightgcn_config = LightGCNConfig(
         latent_dim = args.recdim,

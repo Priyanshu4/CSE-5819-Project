@@ -1,4 +1,3 @@
-import utils
 import logging
 from numpy import np
 from dataloader import BasicDataset

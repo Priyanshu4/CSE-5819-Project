@@ -3,7 +3,6 @@ from torch import nn
 from dataclasses import dataclass
 from dataloader import BasicDataset
 import numpy as np
-import copy
 from typing import Optional
 
 @dataclass
