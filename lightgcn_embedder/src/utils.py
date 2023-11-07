@@ -4,8 +4,7 @@ import numpy as np
 from torch import log
 from dataloader import BasicDataset
 from time import time
-from model import LightGCN
-from model import PairWiseModel
+from lightgcn import LightGCN
 from sklearn.metrics import roc_auc_score
 import random
 import os

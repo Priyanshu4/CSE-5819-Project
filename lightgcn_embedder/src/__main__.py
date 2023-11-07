@@ -1,13 +1,19 @@
 import utils
 import torch
-import time
 import dataloader
-import parse_args
 import multiprocessing
 from similarity import GraphSimilarity
 import argparse
 from lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
 from loss import SimilarityLoss
+import training
+import logging
+from pathlib import Path
+
+CONFIGS_PATH = Path("configs")
+DATASET_PATHS_JSON = CONFIGS_PATH / "dataset_paths.json"
+
+
 
 if __name__ == "__main__":
 
@@ -31,8 +37,22 @@ if __name__ == "__main__":
     parser.add_argument("--multicore", type=int, default=0, help="whether we use multiprocessing or not in test")
     parser.add_argument("--pretrain", type=int, default=0, help="whether we use pretrained weight or not")
     parser.add_argument("--seed", type=int, default=2023, help="random seed")
-
     args = parser.parse_args()
+
+
+    config_dict = json.load(open(config_dir + '/log_config.json'))
+
+    config_dict['handlers']['file_handler']['filename'] = f'{out_path}/log-{name}.txt'
+    logging.config.dictConfig(config_dict)
+    logger = logging.getLogger(name)
+
+    std_out_format = '%(asctime)s - [%(levelname)s] - %(message)s'
+    consoleHandler = logging.StreamHandler(sys.stdout)
+    consoleHandler.setFormatter(logging.Formatter(std_out_format))
+    logger.addHandler(consoleHandler)
+
+    return logger
+
 
     if args.dataset not in dataset_paths.keys():
 
@@ -56,10 +76,13 @@ if __name__ == "__main__":
 
     # Set configurations
     train_config = LightGCNTrainingConfig(
-        dropout = args.dropout,
-        learning_rate = args.lr,
+        epochs = args.epochs,
         batch_size = args.batch_size,
+        learning_rate = args.lr,
+        dropout = args.dropout,
+        decay = args.decay
     )
+
 
     lightgcn_config = LightGCNConfig(
         latent_dim = args.recdim,
@@ -71,12 +94,8 @@ if __name__ == "__main__":
     )
 
     lightgcn = LightGCN(lightgcn_config, dataset)
-    loss = SimilarityLoss(dataset, device, GraphSimilarity(dataset.graph_u2u), alpha=0, beta=0, gamma=0)
+    loss = SimilarityLoss(dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
+    optimizer = torch.optim.Adam(lightgcn.parameters(), lr=train_config.learning_rate, weight_decay=train_config.weight_decay)
 
 
-    for epoch in range(args.epochs):
-        start = time.time()
-        output_information = Procedure.BPR_train_original(
-                dataset, Recmodel, bpr, epoch, neg_k=Neg_k, w=w
-            )
-        print(f"EPOCH[{epoch+1}/{args.epochs}] {output_information}")
+    training.lightgcn_training_loop(dataset, lightgcn, loss, optimizer, train_config.epochs)

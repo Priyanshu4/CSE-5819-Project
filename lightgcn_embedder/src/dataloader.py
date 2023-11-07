@@ -2,15 +2,11 @@ from pathlib import Path
 import pickle
 import json
 
-CONFIGS_PATH = Path("configs")
-DATASET_PATHS_JSON = CONFIGS_PATH / "dataset_paths.json"
+def dataset_paths(datasets_path_json: Path):
+    if not datasets_path_json.exists():
+        raise FileNotFoundError(f"Create a Datasets Path Config file at {datasets_path_json}!")
 
-
-def dataset_paths():
-    if not DATASET_PATHS_JSON.exists():
-        raise FileNotFoundError(f"Create a Datasets Path Config file at {DATASET_PATHS_JSON}!")
-
-    with open(DATASET_PATHS_JSON, "r") as f:
+    with open(datasets_path_json, "r") as f:
         return json.load(f)
 
 class BasicDataset:

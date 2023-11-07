@@ -11,6 +11,7 @@ class LightGCNTrainingConfig:
     dropout: bool = True
     learning_rate: float = 0.001
     batch_size: int
+    decay: float
     n_pos_samples: int = 10
     n_neg_samples: int = 10
 
@@ -95,7 +96,6 @@ class LightGCN(nn.Module):
         users_emb = self.embedding_user.weight
         items_emb = self.embedding_item.weight
         all_emb = torch.cat([users_emb, items_emb])
-        #   torch.split(all_emb , [self.num_users, self.num_items])
         embs = [all_emb]
         if self.config.dropout:
             if self.training:
