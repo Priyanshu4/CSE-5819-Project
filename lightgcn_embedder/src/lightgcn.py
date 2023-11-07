@@ -4,6 +4,20 @@ from dataclasses import dataclass
 from dataloader import BasicDataset
 import numpy as np
 import copy
+from typing import Optional
+
+@dataclass
+class LightGCNTrainingConfig:
+    dropout: bool = True
+    learning_rate: float = 0.001
+    batch_size: int
+    n_pos_samples: int = 10
+    n_neg_samples: int = 10
+
+    # If pretrained, set True and pass pretrained embeddings
+    pretrained: bool = False
+    user_emb: Optional[np.ndarray] = None
+    item_emb: Optional[np.ndarray] = None
 
 @dataclass
 class LightGCNConfig:
@@ -12,18 +26,7 @@ class LightGCNConfig:
     keep_prob: float
     A_split: int
     device: torch.device
-    train_config: LightGCNTrainConfig
-
-@dataclass
-class LightGCNTrainingConfig:
-    dropout: bool = True
-    lr: float = 0.001
-    batch_size: int
-
-    pretrained: bool = False
-    user_emb = 0
-    item_emb = 0
-
+    train_config: LightGCNTrainingConfig
 
 
 class LightGCN(nn.Module):
@@ -32,6 +35,7 @@ class LightGCN(nn.Module):
         self.config = config
         self.dataset: BasicDataset = dataset
         self.__init_weight()
+        self.to(self.config.device)
 
     def __init_weight(self):
         self.num_users = self.dataset.n_users
@@ -118,94 +122,9 @@ class LightGCN(nn.Module):
         users, items = torch.split(light_out, [self.num_users, self.num_items])
         return users, items
 
-    def bpr_loss(self, users, pos, neg):
-        (users_emb, pos_emb, neg_emb, userEmb0, posEmb0, negEmb0) = self.getEmbedding(
-            users.long(), pos.long(), neg.long()
-        )
-        reg_loss = (
-            (1 / 2)
-            * (
-                userEmb0.norm(2).pow(2)
-                + posEmb0.norm(2).pow(2)
-                + negEmb0.norm(2).pow(2)
-            )
-            / float(len(users))
-        )
-        pos_scores = torch.mul(users_emb, pos_emb)
-        pos_scores = torch.sum(pos_scores, dim=1)
-        neg_scores = torch.mul(users_emb, neg_emb)
-        neg_scores = torch.sum(neg_scores, dim=1)
-
-        loss = torch.mean(torch.nn.functional.softplus(neg_scores - pos_scores))
-
-        return loss, reg_loss
-
     def forward(self, users, items):
         # compute embedding
         all_users, all_items = self.computer()
         users_emb = all_users[users]
         items_emb = all_items[items]
         return users_emb, items_emb
-
-
-class Loss_DeepFD:
-    """A DeepFD style loss will be applied to LightGCN for embeddings."""
-
-    def __init__(self, config: LightGCNConfig, dataset: BasicDataset):
-        self.config = config
-        self.dataset = dataset
-        pass
-
-    def __init__(self, features, graph_simi, device, alpha, beta, gamma):
-        self.features = features
-        self.graph_simi = graph_simi
-        self.device = device
-        self.alpha = alpha
-        self.beta = beta
-        self.gamma = gamma
-        self.node_pairs = {}
-        self.original_nodes_batch = None
-        self.extended_nodes_batch = None
-
-    def extend_nodes(self, nodes_batch, training_cps):
-        self.original_nodes_batch = copy.deepcopy(nodes_batch)
-        self.node_pairs = {}
-        self.extended_nodes_batch = set(nodes_batch)
-
-        for node in nodes_batch:
-            cps = training_cps[node]
-            self.node_pairs[node] = cps
-            for cp in cps:
-                self.extended_nodes_batch.add(cp[1])
-        self.extended_nodes_batch = list(self.extended_nodes_batch)
-        return self.extended_nodes_batch
-
-    def get_loss(self, nodes_batch, embs_batch, recon_batch):
-        # calculate loss_simi and loss+recon,
-        # loss_reg is included in SGD optimizer as weight_decay
-        loss_recon = self.get_loss_recon(nodes_batch, recon_batch)
-        loss_simi = self.get_loss_simi(embs_batch)
-        loss = loss_recon + self.alpha * loss_simi
-        return loss
-
-    def get_loss_simi(self, embs_batch):
-        node2index = {n: i for i, n in enumerate(self.extended_nodes_batch)}
-        simi_feat = []
-        simi_embs = []
-        for node, cps in self.node_pairs.items():
-            for i, j in cps:
-                simi_feat.append(torch.FloatTensor([self.graph_simi[i, j]]))
-                dis_ij = (embs_batch[node2index[i]] - embs_batch[node2index[j]]) ** 2
-                dis_ij = torch.exp(-dis_ij.sum())
-                simi_embs.append(dis_ij.view(1))
-        simi_feat = torch.cat(simi_feat, 0).to(self.device)
-        simi_embs = torch.cat(simi_embs, 0)
-        L = simi_feat * ((simi_embs - simi_feat) ** 2)
-        return L.mean()
-
-    def get_loss_recon(self, nodes_batch, recon_batch):
-        feats_batch = self.features[nodes_batch]
-        H_batch = (feats_batch * (self.beta - 1)) + 1
-        assert feats_batch.size() == recon_batch.size() == H_batch.size()
-        L = ((recon_batch - feats_batch) * H_batch) ** 2
-        return L.mean()

@@ -3,8 +3,6 @@ import numpy as np
 import math
 from dataloader import BasicDataset
 from lightgcn import LightGCN
-from dataclasses import dataclass
-
 
 def sample_train_set(dataset: BasicDataset, n_pos: int, n_neg: int, fast: bool = False):
     """ For each user node in the dataset, this samples n_pos positive nodes and n_neg negative nodes.
@@ -25,7 +23,7 @@ def _sample_train_set_normal(dataset, n_pos, n_neg):
     samples = np.zeros((dataset.n_users, n_pos + n_neg), dtype=int)
     all_indices = np.arange(dataset.n_users)
     
-    for i in range(n_users):
+    for i in range(dataset.n_users):
         pos_pool = g_u2u[i].nonzero()[1]                # indices of all positive nodes for user i
         neg_pool = np.setdiff1d(all_indices, pos_pool)  # indices of all negative nodes for user i
 
@@ -41,14 +39,14 @@ def _sample_train_set_normal(dataset, n_pos, n_neg):
             samples[i, n_pos:n_pos + len(neg_pool)] = neg_pool
             samples[i, n_pos+len(neg_pool):] = np.random.choice(all_indices, n_neg - len(neg_pool), replace=False)
 
-    return pos_samples, neg_samples
+    return samples
 
 def _sample_train_set_fast(dataset, n_pos, n_neg):
     g_u2u = dataset.graph_u2u 
     samples = np.zeros((dataset.n_users, n_pos + n_neg), dtype=int)
     all_indices = np.arange(dataset.n_users)
     
-    for i in range(n_users):
+    for i in range(dataset.n_users):
         pos_pool = g_u2u[i].nonzero()[1]                # indices of all positive nodes for user i
 
         if len(pos_pool) >= n_pos:
@@ -57,20 +55,31 @@ def _sample_train_set_fast(dataset, n_pos, n_neg):
             samples[i, :len(pos_pool)] = pos_pool
             samples[i, len(pos_pool):n_pos] = np.random.choice(all_indices, n_pos - len(pos_pool), replace=False)
         
+        # Here we make the simplifying assumption that the majority of nodes with be negatives.
+        # Therefore, sampling from all nodes wil give us mostly negatives and is good enough.
         samples[i, n_pos:] = np.random.choice(all_indices, n_neg, replace=False)
 
-    return pos_samples, neg_samples
+    return samples
 
 def train_lightgcn(dataset: BasicDataset, model: LightGCN, loss):
 
-    model.train() # Put the model in training mode
-    device = model.config.device
+    # Put the model in training mode
+    model.train()
 
-    pos_and_neg_samples = sample_train_set(dataset, pos_samples, neg_samples)
+    # Get configurations
+    model_config = model.config
+    device = model_config.device
+    config = model_config.train_config
+
+    # Get positive and negative samples
+    pos_and_neg_samples = sample_train_set(dataset, config.n_pos_samples, config.n_neg_samples)
+
+    # Get indices of all nodes in random order
     train_nodes = np.random.permutation(dataset.n_users)
+    n_batches = math.ceil(len(train_nodes) // config.batch_size)
 
-
-
+    for i in range(n_batches):
+        
 
 
     pass 
@@ -91,7 +100,6 @@ def BPR_train_original(dataset, recommend_model, loss_class, epoch, neg_k=1, w=N
     posItems = posItems.to(world.device)
     negItems = negItems.to(world.device)
     users, posItems, negItems = utils.shuffle(users, posItems, negItems)
-    total_batch = len(users) // world.config['bpr_batch_size'] + 1
     aver_loss = 0.
     for (batch_i,
          (batch_users,
