@@ -7,17 +7,16 @@ import argparse
 from lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
 from loss import SimilarityLoss
 import training
-import logging
 from pathlib import Path
 
-CONFIGS_PATH = Path("configs")
+CONFIGS_PATH = Path(__file__).parent / "configs"
 DATASET_PATHS_JSON = CONFIGS_PATH / "dataset_paths.json"
-
-
+LOG_CONFIG = CONFIGS_PATH / "log_config.json"
+LOGS_PATH = Path(__file__).parent / "results" / "logs"
 
 if __name__ == "__main__":
 
-    dataset_paths = dataloader.dataset_paths()
+    dataset_paths = dataloader.dataset_paths(DATASET_PATHS_JSON)
     parser = argparse.ArgumentParser(description="Go lightGCN")
     parser.add_argument("--batch_size", type=int, default=2048, help="the batch size for training procedure")
     parser.add_argument("--recdim", type=int, default=64, help="the embedding size of lightGCN")
@@ -39,26 +38,10 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=2023, help="random seed")
     args = parser.parse_args()
 
-
-    config_dict = json.load(open(config_dir + '/log_config.json'))
-
-    config_dict['handlers']['file_handler']['filename'] = f'{out_path}/log-{name}.txt'
-    logging.config.dictConfig(config_dict)
-    logger = logging.getLogger(name)
-
-    std_out_format = '%(asctime)s - [%(levelname)s] - %(message)s'
-    consoleHandler = logging.StreamHandler(sys.stdout)
-    consoleHandler.setFormatter(logging.Formatter(std_out_format))
-    logger.addHandler(consoleHandler)
-
-    return logger
-
+    logger = utils.getLogger(LOGS_PATH, LOG_CONFIG)
 
     if args.dataset not in dataset_paths.keys():
-
-        print("Invalid dataset selected.")
-        print(f"Options are {dataset_paths.keys()}")
-        exit(-1)
+        raise ValueError(f"Invalid dataset selected. Options are {dataset_paths.keys()}")
 
     dataset = dataloader.PickleDataset(
         u2i_pkl_path=dataset_paths[args.dataset]["graph_u2i"],
@@ -71,7 +54,7 @@ if __name__ == "__main__":
 
     # ==============================
     utils.set_seed(args.seed)
-    print(">>SEED:", args.seed)
+    logger.info(">>SEED:", args.seed)
     # ==============================
 
     # Set configurations
@@ -98,4 +81,4 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(lightgcn.parameters(), lr=train_config.learning_rate, weight_decay=train_config.weight_decay)
 
 
-    training.lightgcn_training_loop(dataset, lightgcn, loss, optimizer, train_config.epochs)
+    training.lightgcn_training_loop(dataset, lightgcn, loss, optimizer, train_config.epochs, logger)

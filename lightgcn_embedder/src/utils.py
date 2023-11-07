@@ -8,6 +8,10 @@ from lightgcn import LightGCN
 from sklearn.metrics import roc_auc_score
 import random
 import os
+import json
+import logging
+import sys
+from datetime import datetime
 try:
     from cppimport import imp_from_filepath
     from os.path import join, dirname
@@ -19,26 +23,24 @@ except:
     world.cprint("Cpp extension not loaded")
     sample_ext = False
 
+def getLogger(log_dir, log_config_file):
+    config_dict = json.load(open(log_config_file))
 
-class BPRLoss:
-    def __init__(self,
-                 recmodel : PairWiseModel,
-                 config : dict):
-        self.model = recmodel
-        self.weight_decay = config['decay']
-        self.lr = config['lr']
-        self.opt = optim.Adam(recmodel.parameters(), lr=self.lr)
+    now = datetime.now()
+    timestamp = now.strftime("%Y_%m_%d_%H_%M")
+    log_file = log_dir / (timestamp + ".log")
 
-    def stageOne(self, users, pos, neg):
-        loss, reg_loss = self.model.bpr_loss(users, pos, neg)
-        reg_loss = reg_loss*self.weight_decay
-        loss = loss + reg_loss
+    config_dict['handlers']['file_handler']['filename'] = log_file
 
-        self.opt.zero_grad()
-        loss.backward()
-        self.opt.step()
+    logging.config.dictConfig(config_dict)
+    logger = logging.getLogger("Logger")
 
-        return loss.cpu().item()
+    std_out_format = '%(asctime)s - [%(levelname)s] - %(message)s'
+    consoleHandler = logging.StreamHandler(sys.stdout)
+    consoleHandler.setFormatter(logging.Formatter(std_out_format))
+    logger.addHandler(consoleHandler)
+
+    return logger
 
 
 def UniformSample_original(dataset, neg_ratio = 1):

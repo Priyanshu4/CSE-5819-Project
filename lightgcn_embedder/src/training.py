@@ -11,13 +11,13 @@ def lightgcn_training_loop(dataset: BasicDataset, model: LightGCN, model_loss: M
     for epoch in range(epochs):
 
         if type(model_loss) == SimilarityLoss:
-            train_lightgcn_simi_loss(dataset, model, model_loss, optimizer, epoch)
+            train_lightgcn_simi_loss(dataset, model, model_loss, optimizer, epoch, logger)
         elif type(model_loss) == BPRLoss:
-            train_lightgcn_bpr_loss(dataset, model, model_loss, optimizer, epoch)
+            train_lightgcn_bpr_loss(dataset, model, model_loss, optimizer, epoch, logger)
         else:
             raise TypeError(f"Loss of type {type(model_loss)} is not supported.")
 
-def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss: SimilarityLoss, optimizer: torch.optim.Optimizer, epoch: int):
+def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss: SimilarityLoss, optimizer: torch.optim.Optimizer, epoch: int, logger):
 
     # Put the model in training mode
     model.train()
@@ -38,6 +38,8 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
     optimizer.zero_grad()
     model.zero_grad()
 
+    loss_sum = 0
+
     for i in range(n_batches):
         nodes_batch = user_nodes[i * batch_size: (i + 1) * batch_size]
         samples = model_loss.samples[nodes_batch]
@@ -48,6 +50,7 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
 
         user_embs, item_embs = model(nodes_batch)
         loss = model_loss.get_loss(nodes_batch, item_nodes)
+        loss_sum += loss.item()
 
         model_loss.backward()
         optimizer.step()
@@ -59,19 +62,13 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
             f"EP[{epoch}], Batch [{i+1}/{n_batches}], Loss: {loss.item():.4f}, Dealed Nodes [{len(visited_user_nodes)}/{len(user_nodes)}]"
         )
 
-        # stop when all nodes are trained
+        # Stop when all nodes are trained, this may be before all batches are used    
         if len(visited_user_nodes) == len(user_nodes):
-            
-            if i < n_batches - 1:
-                # TODO: LOG MESSAGE THAT INDICATES ALL NODES DEALED
-                pass
-            
-            break
-
-    pass 
+            logger.info(f"Epoch {epoch} complete! All nodes dealed after {i} batches. Average Loss: {loss_sum / (i + 1)} ")            
+            break 
 
 
-def train_lightgcn_bpr_loss(dataset: BasicDataset, model: LightGCN, model_loss: SimilarityLoss, optimizer: torch.optim.Optimizer, epoch: int):
+def train_lightgcn_bpr_loss(dataset: BasicDataset, model: LightGCN, model_loss: SimilarityLoss, optimizer: torch.optim.Optimizer, epoch: int, logger):
 
 
     def getEmbedding(self, users, pos_items, neg_items):
