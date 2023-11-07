@@ -22,7 +22,11 @@ large_matrix = obj.numpy()
 num_rows, num_cols = large_matrix.shape
 
 print(num_rows, num_cols)
+print(large_matrix[0])
 
+
+
+"""
 # Shuffle the row indices
 shuffled_indices = np.random.permutation(num_rows)
 
@@ -38,4 +42,4 @@ group3_indices = shuffled_indices[2 * group_size:]
 group1 = large_matrix[group1_indices]
 group2 = large_matrix[group2_indices]
 group3 = large_matrix[group3_indices]
-
+"""

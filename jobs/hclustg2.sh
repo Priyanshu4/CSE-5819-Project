@@ -14,4 +14,4 @@ conda activate lightgcn
 
 cd ../hclust
 
-python hclustmp.py --data=g2
+python main.py --data=g2

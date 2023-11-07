@@ -62,39 +62,6 @@ class HClust:
         
         return leaves
 
-    def _find_leaves_recursive(self, row, leaves=None):
-        """
-        Recursive helper function for hclust to find all leaves under a specific branch
-
-        Inputs:
-        row (ndarray) - row of the linkage matrix
-        leaves (list) - list to add the nodes to
-
-        Outputs:
-        leaves (list) - list of nodes under a branch
-
-        """
-
-        if leaves is None:
-            leaves = []
-
-        maxlen = int(self.Z[-1, -1]) - 1
-        lefti = int(row[0])
-        righti = int(row[1])
-
-        if lefti <= maxlen:
-            leaves.append(lefti)
-        else:
-            newrow = self.Z[lefti - maxlen-1]
-            self._find_leaves_helper(newrow, leaves)
-
-        if righti <= maxlen:
-            leaves.append(righti)
-        else:
-            newrow = self.Z[righti - maxlen-1]
-            self._find_leaves_helper(newrow,leaves)
-            
-        return leaves
     
     def _find_leaves_iterative(self, row, leaves=None):
         """
