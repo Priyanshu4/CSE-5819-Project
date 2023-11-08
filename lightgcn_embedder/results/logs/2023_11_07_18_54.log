@@ -1,3 +1,0 @@
-2023-11-07 18:54:42,051 - [INFO] - [Logger] - SEED: 2023
-2023-11-07 18:54:42,223 - [INFO] - [Logger] - Initializing weights with normal distribution
-2023-11-07 18:54:42,301 - [INFO] - [Logger] - LightGCN is ready to go! (dropout:0)
