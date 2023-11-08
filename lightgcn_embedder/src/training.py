@@ -18,7 +18,9 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
     batch_size = config.batch_size
 
     # Generates positive and negative samples at the start of each epoch
+    logger.info(f"EP[{epoch}]: Sampling positive and negative user nodes...")
     samples = model_loss.sample_train_set_pos_neg_users()
+    logger.info(f"EP[{epoch}]: Positive and negative user nodes sampled.")
 
     # Get indices of all nodes in random order
     user_nodes = np.random.permutation(dataset.n_users)
