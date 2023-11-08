@@ -4,13 +4,16 @@ from dataclasses import dataclass
 from dataloader import BasicDataset
 import numpy as np
 from typing import Optional
+import utils
+import logging
 
 @dataclass
 class LightGCNTrainingConfig:
+    epochs: int = 10
     dropout: bool = True
     learning_rate: float = 0.001
-    batch_size: int
-    decay: float
+    batch_size: int = 2048
+    weight_decay: float = 1e-4
     n_pos_samples: int = 10
     n_neg_samples: int = 10
 
@@ -30,14 +33,14 @@ class LightGCNConfig:
 
 
 class LightGCN(nn.Module):
-    def __init__(self, config: LightGCNConfig, dataset: BasicDataset):
+    def __init__(self, config: LightGCNConfig, dataset: BasicDataset, logger: logging.Logger):
         super(LightGCN, self).__init__()
         self.config = config
         self.dataset: BasicDataset = dataset
-        self.__init_weight()
+        self.__init_weight(logger)
         self.to(self.config.device)
 
-    def __init_weight(self):
+    def __init_weight(self, logger: logging.Logger):
         self.num_users = self.dataset.n_users
         self.num_items = self.dataset.m_items
         self.latent_dim = self.config.latent_dim
@@ -50,23 +53,21 @@ class LightGCN(nn.Module):
         self.embedding_item = torch.nn.Embedding(
             num_embeddings=self.num_items, embedding_dim=self.latent_dim
         )
-        if self.config.pretrain == 0:
+        if self.config.train_config.pretrained == 0:
             nn.init.normal_(self.embedding_user.weight, std=0.1)
             nn.init.normal_(self.embedding_item.weight, std=0.1)
-            print("use NORMAL distribution initializer")
+            logger.info("Initializing weights with normal distribution")
         else:
             self.embedding_user.weight.data.copy_(
-                torch.from_numpy(self.config.user_emb)
+                torch.from_numpy(self.config.train_config.user_emb)
             )
             self.embedding_item.weight.data.copy_(
-                torch.from_numpy(self.config.item_emb)
+                torch.from_numpy(self.config.train_config.item_emb)
             )
-            print("use pretrained data")
+            logger.info("Using pretrained weights")
         self.f = nn.Sigmoid()
-        self.Graph = self.dataset.getSparseGraph()
-        print(f"lgn is already to go(dropout:{self.config.dropout})")
-
-        # print("save_txt")
+        self.Graph = utils.sparse_matrix_to_tensor(self.dataset.graph_u2i)
+        logger.info(f"LightGCN is ready to go! (dropout:{self.config.train_config.dropout})")
 
     def __dropout_x(self, x, keep_prob):
         size = x.size()
@@ -96,9 +97,8 @@ class LightGCN(nn.Module):
         items_emb = self.embedding_item.weight
         all_emb = torch.cat([users_emb, items_emb])
         embs = [all_emb]
-        if self.config.dropout:
+        if self.config.train_config.dropout:
             if self.training:
-                print("droping")
                 g_droped = self.__dropout(self.keep_prob)
             else:
                 g_droped = self.Graph

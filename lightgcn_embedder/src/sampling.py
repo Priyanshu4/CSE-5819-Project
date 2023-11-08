@@ -1,5 +1,5 @@
 import logging
-from numpy import np
+import numpy as np
 from dataloader import BasicDataset
 from time import time
 

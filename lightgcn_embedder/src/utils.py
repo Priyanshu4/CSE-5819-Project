@@ -1,45 +1,59 @@
 import torch
-from torch import nn, optim
 import numpy as np
-from torch import log
-from dataloader import BasicDataset
-from time import time
-from lightgcn import LightGCN
-from sklearn.metrics import roc_auc_score
-import random
-import os
-import json
 import logging
+import logging.config
 import sys
+from pathlib import Path
 from datetime import datetime
 from sampling import set_sampling_seed
 
-def configure_logger(name, log_dir, log_config_file):
-    config_dict = json.load(open(log_config_file))
+def configure_logger(name: str, log_dir: Path, log_level: str = "info") -> logging.Logger:
+    log_levels = {
+        'debug': logging.DEBUG,
+        'info': logging.INFO,
+        'warning': logging.WARNING,
+        'error': logging.ERROR,
+        'critical': logging.CRITICAL
+    }
 
+    # Create a logger
+    logger = logging.getLogger(name)
+    logger.setLevel(log_levels.get(log_level, logging.INFO))
+
+    # Create a file handler which logs messages
     now = datetime.now()
     timestamp = now.strftime("%Y_%m_%d_%H_%M")
     log_file = log_dir / (timestamp + ".log")
+    file_handler = logging.FileHandler(log_file)
+    file_format = '%(asctime)s - [%(levelname)s] - [%(name)s] - %(message)s'
+    file_handler.setFormatter(logging.Formatter(file_format))
 
-    config_dict['handlers']['file_handler']['filename'] = log_file
-
-    logging.config.dictConfig(config_dict)
-    logger = logging.getLogger(name)
-
+    # Create a console handler which logs messages to stdout
     std_out_format = '%(asctime)s - [%(levelname)s] - %(message)s'
-    consoleHandler = logging.StreamHandler(sys.stdout)
-    consoleHandler.setFormatter(logging.Formatter(std_out_format))
-    logger.addHandler(consoleHandler)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(logging.Formatter(std_out_format))
+
+    # Add the handlers to the logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
 
     return logger
 
-def set_seed(seed):
+def set_seed(seed: int):
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)
     set_sampling_seed(seed)
 
+def sparse_matrix_to_tensor(X) -> torch.sparse.FloatTensor:
+    coo = X.tocoo().astype(np.float32)
+    row = torch.Tensor(coo.row).long()
+    col = torch.Tensor(coo.col).long()
+    index = torch.stack([row, col])
+    data = torch.FloatTensor(coo.data)
+    return torch.sparse.FloatTensor(index, data, torch.Size(coo.shape))
+    
 class timer:
     """
     Time context manager for code block
@@ -100,75 +114,3 @@ class timer:
             timer.NAMED_TAPE[self.named] += timer.time() - self.start
         else:
             self.tape.append(timer.time() - self.start)
-
-
-# ====================Metrics==============================
-# =========================================================
-def RecallPrecision_ATk(test_data, r, k):
-    """
-    test_data should be a list? cause users may have different amount of pos items. shape (test_batch, k)
-    pred_data : shape (test_batch, k) NOTE: pred_data should be pre-sorted
-    k : top-k
-    """
-    right_pred = r[:, :k].sum(1)
-    precis_n = k
-    recall_n = np.array([len(test_data[i]) for i in range(len(test_data))])
-    recall = np.sum(right_pred/recall_n)
-    precis = np.sum(right_pred)/precis_n
-    return {'recall': recall, 'precision': precis}
-
-
-def MRRatK_r(r, k):
-    """
-    Mean Reciprocal Rank
-    """
-    pred_data = r[:, :k]
-    scores = np.log2(1./np.arange(1, k+1))
-    pred_data = pred_data/scores
-    pred_data = pred_data.sum(1)
-    return np.sum(pred_data)
-
-def NDCGatK_r(test_data,r,k):
-    """
-    Normalized Discounted Cumulative Gain
-    rel_i = 1 or 0, so 2^{rel_i} - 1 = 1 or 0
-    """
-    assert len(r) == len(test_data)
-    pred_data = r[:, :k]
-
-    test_matrix = np.zeros((len(pred_data), k))
-    for i, items in enumerate(test_data):
-        length = k if k <= len(items) else len(items)
-        test_matrix[i, :length] = 1
-    max_r = test_matrix
-    idcg = np.sum(max_r * 1./np.log2(np.arange(2, k + 2)), axis=1)
-    dcg = pred_data*(1./np.log2(np.arange(2, k + 2)))
-    dcg = np.sum(dcg, axis=1)
-    idcg[idcg == 0.] = 1.
-    ndcg = dcg/idcg
-    ndcg[np.isnan(ndcg)] = 0.
-    return np.sum(ndcg)
-
-def AUC(all_item_scores, dataset, test_data):
-    """
-        design for a single user
-    """
-    dataset : BasicDataset
-    r_all = np.zeros((dataset.m_items, ))
-    r_all[test_data] = 1
-    r = r_all[all_item_scores >= 0]
-    test_item_scores = all_item_scores[all_item_scores >= 0]
-    return roc_auc_score(r, test_item_scores)
-
-def getLabel(test_data, pred_data):
-    r = []
-    for i in range(len(test_data)):
-        groundTrue = test_data[i]
-        predictTopK = pred_data[i]
-        pred = list(map(lambda x: x in groundTrue, predictTopK))
-        pred = np.array(pred).astype("float")
-        r.append(pred)
-    return np.array(r).astype('float')
-
-# ====================end Metrics=============================
-# =========================================================

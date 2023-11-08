@@ -18,7 +18,7 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
     batch_size = config.batch_size
 
     # Generates positive and negative samples at the start of each epoch
-    model_loss.new_epoch()
+    samples = model_loss.sample_train_set_pos_neg_users()
 
     # Get indices of all nodes in random order
     user_nodes = np.random.permutation(dataset.n_users)
@@ -29,16 +29,17 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
     model.zero_grad()
 
     loss_sum = 0
+    visited_user_nodes = set()
 
     for i in range(n_batches):
         nodes_batch = user_nodes[i * batch_size: (i + 1) * batch_size]
-        extended_nodes_batch = model_loss.extend_user_node_batch(nodes_batch)
+        extended_nodes_batch = model_loss.extend_user_node_batch(nodes_batch, samples)
 
         # Add the nodes in this batch and the sampled nodes for this batch to visited set
         visited_user_nodes |= set(extended_nodes_batch)
 
-        user_embs, item_embs = model(extended_nodes_batch)
-        loss = model_loss.get_loss(nodes_batch, item_nodes)
+        user_embs, item_embs = model(extended_nodes_batch, item_nodes)
+        loss = model_loss.get_loss(nodes_batch, user_embs=user_embs, extended_user_nodes_batch=extended_nodes_batch, samples=samples)
         loss_sum += loss.item()
 
         model_loss.backward()

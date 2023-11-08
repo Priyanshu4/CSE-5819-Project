@@ -1,0 +1,4 @@
+2023-11-07 19:14:22,920 - [INFO] - [Logger] - SEED: 2023
+2023-11-07 19:14:23,596 - [INFO] - [Logger] - Initializing weights with normal distribution
+2023-11-07 19:14:24,480 - [INFO] - [Logger] - LightGCN is ready to go! (dropout:0)
+2023-11-07 19:18:07,638 - [INFO] - [Logger] - Training LightGCN on yelpnyc with <class 'loss.SimilarityLoss'> loss function and Adam optimizer.

@@ -1,5 +1,5 @@
 from lightgcn import LightGCN, LightGCNConfig
-from numpy import np
+import numpy as np
 from dataloader import BasicDataset
 import torch
 import sampling
@@ -54,6 +54,7 @@ class SimilarityLoss(ModelLoss):
     def sample_train_set_pos_neg_users(self):
         return sampling.sample_train_set_pos_neg_users(self.dataset, self.n_pos, self.n_neg, self.fast_sampling)
 
+    @staticmethod
     def extend_user_node_batch(user_nodes, samples):
         """ Extends the batch of user nodes with their samples.
         """

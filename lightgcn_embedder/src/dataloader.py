@@ -25,13 +25,17 @@ class DataLoader:
         if "dataset_type" not in dataset_config.keys():
             raise ValueError(f"dataset_type not specified for {dataset_name} dataset.")
         
-        if dataset_config["dataset_type"] == "pickle":
-            dataset = PickleDataset(
-                u2i_pkl_path=self._dataset_paths[dataset_name]["graph_u2i"],
-                user_labels_pkl_path=self._dataset_paths[dataset_name]["labels"],
-            )
-        else:
-            raise ValueError(f"{dataset_config['dataset_type']} is not a valid dataset type.")
+        try:
+            if dataset_config["dataset_type"] == "pickle":
+
+                dataset = PickleDataset(
+                    u2i_pkl_path=dataset_config["filepaths"]["graph_u2i"],
+                    user_labels_pkl_path=dataset_config["filepaths"]["labels"],
+                )
+            else:
+                raise ValueError(f"{dataset_config['dataset_type']} is not a valid dataset type.")
+        except KeyError as e:
+            raise KeyError(f"Missing key in {dataset_name} dataset config: {e}")
 
         return dataset
     
@@ -65,9 +69,9 @@ class BasicDataset:
 
 class PickleDataset(BasicDataset):
     def __init__(self, u2i_pkl_path: Path, user_labels_pkl_path: Path):
-        self._graph_u2i = pickle.load(open(u2i_pkl_path))
-        self._graph_u2u = self._graph_u2i @ self._graph_u2i
-        self._labels = pickle.load(open(user_labels_pkl_path))
+        self._graph_u2i = pickle.load(open(u2i_pkl_path, "rb"))
+        self._graph_u2u = self._graph_u2i @ self._graph_u2i.T
+        self._labels = pickle.load(open(user_labels_pkl_path, "rb"))
         self._n_users, self._m_items = self._graph_u2i.shape
         if len(self._labels) != self._n_users:
             raise ValueError(

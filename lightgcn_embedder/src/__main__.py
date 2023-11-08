@@ -9,10 +9,9 @@ from loss import SimilarityLoss, BPRLoss
 import training
 from pathlib import Path
 
-CONFIGS_PATH = Path(__file__).parent / "configs"
+CONFIGS_PATH = Path(__file__).parent.parent / "configs"
 DATASET_CONFIG = CONFIGS_PATH / "datasets.json"
-LOG_CONFIG = CONFIGS_PATH / "log_config.json"
-LOGS_PATH = Path(__file__).parent / "results" / "logs"
+LOGS_PATH = Path(__file__).parent.parent / "results" / "logs"
 
 if __name__ == "__main__":
 
@@ -39,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=2023, help="random seed")
     args = parser.parse_args()
 
-    logger = utils.configure_logger("Logger", LOGS_PATH, LOG_CONFIG)
+    logger = utils.configure_logger("Logger", LOGS_PATH, "info")
     dataset = dataloader.load_dataset(args.dataset)
 
     GPU = torch.cuda.is_available()
@@ -47,7 +46,7 @@ if __name__ == "__main__":
     CORES = multiprocessing.cpu_count() // 2
 
     utils.set_seed(args.seed)
-    logger.info(">>SEED:", args.seed)
+    logger.info(f"SEED: {args.seed}")
 
     # Set configurations
     train_config = LightGCNTrainingConfig(
@@ -55,7 +54,7 @@ if __name__ == "__main__":
         batch_size = args.batch_size,
         learning_rate = args.lr,
         dropout = args.dropout,
-        decay = args.decay
+        weight_decay = args.decay
     )
 
     lightgcn_config = LightGCNConfig(
@@ -67,9 +66,9 @@ if __name__ == "__main__":
         train_config = train_config
     )
 
-    lightgcn = LightGCN(lightgcn_config, dataset)
-    loss = SimilarityLoss(dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
+    lightgcn = LightGCN(lightgcn_config, dataset, logger)
     optimizer = torch.optim.Adam(lightgcn.parameters(), lr=train_config.learning_rate, weight_decay=train_config.weight_decay)
+    loss = SimilarityLoss(dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
 
     train_lightgcn = None
     if type(loss) == SimilarityLoss:
@@ -79,5 +78,7 @@ if __name__ == "__main__":
     else:
         raise TypeError(f"Loss of type {type(loss)} is not supported.")
             
+    logger.info(f"Training LightGCN on {args.dataset} with {loss.__class__.__name__} loss function and {optimizer.__class__.__name__} optimizer.")
+
     for epoch in range(train_config.epochs):
         train_lightgcn(dataset, lightgcn, loss, optimizer, train_config.epochs, logger)
