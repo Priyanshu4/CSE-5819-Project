@@ -81,4 +81,4 @@ if __name__ == "__main__":
     logger.info(f"Training LightGCN on {args.dataset} with {loss.__class__.__name__} loss function and {optimizer.__class__.__name__} optimizer.")
 
     for epoch in range(train_config.epochs):
-        train_lightgcn(dataset, lightgcn, loss, optimizer, train_config.epochs, logger)
+        train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
