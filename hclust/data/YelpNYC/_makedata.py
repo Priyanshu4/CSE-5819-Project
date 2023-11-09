@@ -46,8 +46,9 @@ cwd = os.getcwd()
 
 
 num_rows, num_cols = large_matrix.shape
+print(large_matrix.shape)
 
-# Shuffle the row indices
+"""# Shuffle the row indices
 shuffled_indices = np.random.permutation(num_rows)
 
 # Calculate the number of rows for each group
@@ -71,3 +72,4 @@ write_pickle("g3", group3)
 write_pickle("g1_map", group1_indices)
 write_pickle("g2_map", group2_indices)
 write_pickle("g3_map", group3_indices)
+"""
