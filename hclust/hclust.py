@@ -21,7 +21,6 @@ class HClust:
         """
 
         self.Z = linkage(self.data, method=method)
-        
         return self.Z
     
 
