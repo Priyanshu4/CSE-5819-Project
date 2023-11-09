@@ -14,6 +14,6 @@ source /home/pra20003/miniconda3/etc/profile.d/conda.sh
 
 conda activate deepfd-env
 
-cd ../deepfd
+cd ../testing
 
-python -m src.main --cuda -1 --dataSet yelpnyc --cls_method dbscan
+python test_dbscan.py --embeddings ../data/yelpnyc/embedded/deepfd/embs_ep10.pkl --labels ../data/yelpnyc/yelpnyc_labels.pkl

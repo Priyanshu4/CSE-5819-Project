@@ -1,3 +1,4 @@
 /data/yelpnyc/yelpnyc/
 /hclust/results
 token
+*.pyc
