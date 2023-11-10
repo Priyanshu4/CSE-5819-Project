@@ -108,7 +108,7 @@ def test_optics_dbscan_fraud_detection(data: np.ndarray, xi: float, epsilon_valu
     return results
 
 def log_dbscan_results(results: dict, logger: logging.Logger):
-    headers = ["Epsilon", "Min Samples", "Precision", "Recall", "F1 Score"]
+    headers = ["Epsilon", "Min Samples", "Accuracy", "Precision", "Recall", "F1 Score"]
     results_data = []
     for key, result in results.items():
         epsilon = key[0]
@@ -116,9 +116,10 @@ def log_dbscan_results(results: dict, logger: logging.Logger):
         results_data.append({
             "Epsilon": epsilon,
             "Min Samples": min_samples,
-            "Precision": f"{result['precision']:.4f}",
-            "Recall": f"{result['recall']:.4f}",
-            "F1 Score": f"{result['f1_score']:.4f}",
+            "Accuracy": f"{result['accuracy']:.3f}",
+            "Precision": f"{result['precision']:.3f}",
+            "Recall": f"{result['recall']:.3f}",
+            "F1 Score": f"{result['f1_score']:.3f}",
         })
     utils.print_table(headers, results_data, logger.info)    
     return results    
@@ -127,6 +128,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test Clustering Technique')
     parser.add_argument('--embeddings', type=str, required=True, help='File path of the embeddings file')
     parser.add_argument('--labels', type=str, required=True, help='File path of the true labels file')
+    parser.add_argument('--algorithm', type=str, default="OPTICS", help='Algorithm to use: either OPTICS or DBSCAN')
     args = parser.parse_args()
 
     logger = logging.getLogger(__name__)
@@ -163,10 +165,17 @@ if __name__ == "__main__":
     else:
         logger.debug(f"Embeddings array size is {embeddings_size} bytes.")
 
-    epsilon_values = [0.001, 0.01, 0.1, 1, 5]
-    min_samples_values = [2, 5, 10, 20, 50]
-    optics_results = test_optics_dbscan_fraud_detection(embeddings, 0.05, epsilon_values, min_samples_values, true_labels, logger)
-    #dbscan_results = test_dbscan_fraud_detection(embeddings, epsilon_values, min_samples_values, true_labels, logger)
-    log_dbscan_results(optics_results, logger)
+    logger.debug(f"Embeddings shape has {embeddings.shape[0]} users and {embeddings.shape[1]} features.")
+
+    results = []
+    if args.algorithm == "OPTICS":
+        epsilon_values = [1, 5]
+        min_samples_values = [5, 10, 20, 50]
+        results = test_optics_dbscan_fraud_detection(embeddings, 0.05, epsilon_values, min_samples_values, true_labels, logger)
+    elif args.algorithm == "DBSCAN":
+        epsilon_values = [0.0001, 0.001, 0.01, 0.1]
+        min_samples_values = [5, 10, 20, 50]
+        results = test_dbscan_fraud_detection(embeddings, epsilon_values, min_samples_values, true_labels, logger)
+    log_dbscan_results(results, logger)
 
 
