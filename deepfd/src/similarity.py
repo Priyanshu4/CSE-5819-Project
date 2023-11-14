@@ -2,7 +2,8 @@ from bitarray import bitarray
 
 
 class GraphSimilarity:
-    """Class for computing similarity between 2 user nodes.
+    """
+    Class for computing similarity between 2 user nodes.
     Replaces large np array of pairwise similarities that may not be able to fit in memory.
     Takes user to item sparse matrix as input.
     """
