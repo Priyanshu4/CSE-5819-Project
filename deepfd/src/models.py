@@ -1,5 +1,5 @@
-__author__ = "Tong Zhao"
-__email__ = "tzhao2@nd.edu"
+__author__ = 'Tong Zhao'
+__email__ = 'tzhao2@nd.edu'
 
 import os
 import sys
@@ -11,7 +11,6 @@ from scipy.sparse import csr_matrix
 
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 class Classification(nn.Module):
     def __init__(self, emb_size):
@@ -33,7 +32,6 @@ class Classification(nn.Module):
         x = F.elu_(self.fc2(x))
         logists = torch.log_softmax(x, 1)
         return logists
-
 
 class DeepFD(nn.Module):
     def __init__(self, features, feat_size, hidden_size, emb_size):
@@ -61,8 +59,7 @@ class DeepFD(nn.Module):
         recon = F.relu_(self.fc4(x_de))
         return embs, recon
 
-
-class Loss_DeepFD:
+class Loss_DeepFD():
     def __init__(self, features, graph_simi, device, alpha, beta, gamma):
         self.features = features
         self.graph_simi = graph_simi
@@ -81,13 +78,10 @@ class Loss_DeepFD:
 
         for node in nodes_batch:
             cps = training_cps[node]
-            self.node_pairs[node] = np.concatenate((cps[0], cps[1]))
-            for pos_node in cps[0]:
-                self.extended_nodes_batch.add(pos_node)
-            for neg_node in cps[1]:
-                self.extended_nodes_batch.add(neg_node)
+            self.node_pairs[node] = cps
+            for cp in cps:
+                self.extended_nodes_batch.add(cp[1])
         self.extended_nodes_batch = list(self.extended_nodes_batch)
-
         return self.extended_nodes_batch
 
     def get_loss(self, nodes_batch, embs_batch, recon_batch):
@@ -99,15 +93,13 @@ class Loss_DeepFD:
         return loss
 
     def get_loss_simi(self, embs_batch):
-        node2index = {n: i for i, n in enumerate(self.extended_nodes_batch)}
+        node2index = {n:i for i,n in enumerate(self.extended_nodes_batch)}
         simi_feat = []
         simi_embs = []
         for node, cps in self.node_pairs.items():
-            for pair_node in cps:
-                simi_feat.append(torch.FloatTensor([self.graph_simi[node, pair_node]]))
-                dis_ij = (
-                    embs_batch[node2index[node]] - embs_batch[node2index[pair_node]]
-                ) ** 2
+            for i, j in cps:
+                simi_feat.append(torch.FloatTensor([self.graph_simi[i, j]]))
+                dis_ij = (embs_batch[node2index[i]] - embs_batch[node2index[j]]) ** 2
                 dis_ij = torch.exp(-dis_ij.sum())
                 simi_embs.append(dis_ij.view(1))
         simi_feat = torch.cat(simi_feat, 0).to(self.device)

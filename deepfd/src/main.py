@@ -15,7 +15,7 @@ from src.dataLoader import *
 
 parser = argparse.ArgumentParser(description='DeepFD')
 parser.add_argument('--cuda', type=int, default=-1, help='Which GPU to run on (-1 for using CPU, 9 for not specifying which GPU to use.)')
-parser.add_argument('--dataSet', type=str, default='weibo')
+parser.add_argument('--dataSet', type=str, default='yelpnyc')
 parser.add_argument('--file_paths', type=str, default='file_paths.json')
 parser.add_argument('--config_dir', type=str, default='./configs')
 parser.add_argument('--logs_dir', type=str, default='./logs')
@@ -34,8 +34,6 @@ parser.add_argument('--alpha', type=float, default=10)
 parser.add_argument('--beta', type=float, default=20)
 parser.add_argument('--gamma', type=float, default=0.001)
 parser.add_argument('--lr', type=float, default=0.025)
-
-parser.add_argument('--save_embs', type=int, default=0)
 args = parser.parse_args()
 args.argv = sys.argv
 
@@ -80,11 +78,6 @@ def main():
             test_dbscan(Dl, args, logger, deepFD, epoch)
         elif args.cls_method == 'mlp':
             args.max_vali_f1 = train_classification(Dl, args, logger, deepFD, cls_model, device, args.max_vali_f1, epoch)
-
-    if args.save_embs:
-        embeddings = get_embeddings(deepFD, Dl)
-        save_embeddings(embeddings, args.out_dir, args.epochs)
-
 
 if __name__ == '__main__':
     main()

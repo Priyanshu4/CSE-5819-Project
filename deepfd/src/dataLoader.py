@@ -1,5 +1,5 @@
-__author__ = "Tong Zhao"
-__email__ = "tzhao2@nd.edu"
+__author__ = 'Tong Zhao'
+__email__ = 'tzhao2@nd.edu'
 
 import os
 import sys
@@ -12,101 +12,75 @@ from scipy.sparse import csr_matrix
 
 from src.utils import *
 from collections import defaultdict, Counter
-from src.similarity import GraphSimilarity
 
-
-class DataLoader:
-    """data loader"""
-
+class DataLoader():
+    """ data loader """
     def __init__(self, args, logger):
         self.ds = args.dataSet
         self.args = args
         self.logger = logger
-        self.file_paths = json.load(open(f"{args.config_dir}/{args.file_paths}"))
-        print(self.file_paths)
+        self.file_paths = json.load(open(f'{args.config_dir}/{args.file_paths}'))
         self.load_dataSet(args.dataSet)
 
     def load_dataSet(self, dataSet):
         ds = dataSet
-        graph_u2p_file = self.file_paths[ds]["graph_u2p"]
-        graph_simi_file = self.file_paths[ds]["graph_u2u_simi"]
-        labels_file = self.file_paths[ds]["labels"]
+        graph_u2p_file = self.file_paths[ds]['graph_u2p']
+        graph_simi_file = self.file_paths[ds]['graph_u2u_simi']
+        labels_file = self.file_paths[ds]['labels']
 
-        graph_u2p = pickle.load(open(graph_u2p_file, "rb"))
-        labels = pickle.load(open(labels_file, "rb"))
+        graph_u2p = pickle.load(open(graph_u2p_file, 'rb'))
+        labels = pickle.load(open(labels_file, 'rb'))
         graph_u2p[graph_u2p > 0] = 1
         graph_u2u = graph_u2p @ graph_u2p.T
         if os.path.isfile(graph_simi_file):
-            graph_simi = pickle.load(open(graph_simi_file, "rb"))
-            self.logger.info("loaded similarity graph from cache")
+            graph_simi = pickle.load(open(graph_simi_file, 'rb'))
+            self.logger.info('loaded similarity graph from cache')
         else:
-            try:
-                graph_simi = np.zeros(np.shape(graph_u2u))
-                nz_entries = []
-                for i in range(np.shape(graph_u2u)[0]):
-                    for j in range(i + 1, np.shape(graph_u2u)[0]):
-                        nz_entries.append([i, j])
-                self.logger.info(
-                    f"Calculating user-user similarity graph, {len(nz_entries)} edges to go..."
-                )
-                sz = 1000
-                n_batch = math.ceil(len(nz_entries) / sz)
-                batches = np.array_split(nz_entries, n_batch)
-                pool = Pool()
-                results = pool.map(
-                    get_simi_single_iter,
-                    [(entries_batch, graph_u2p) for entries_batch in batches],
-                )
-                results = list(zip(*results))
-                row = np.concatenate(results[0])
-                col = np.concatenate(results[1])
-                dat = np.concatenate(results[2])
-                for x in range(len(row)):
-                    graph_simi[row[x], col[x]] = dat[x]
-                    graph_simi[col[x], row[x]] = dat[x]
-                pickle.dump(graph_simi, open(graph_simi_file, "wb"))
-                self.logger.info(
-                    "Calculated user-user similarity and saved it for catch."
-                )
-            except np.core._exceptions._ArrayMemoryError as e:
-                print(
-                    "Cannot fit user similarity array in memory! "
-                    + f" See exception below:\n{str(e)}"
-                    + "\nWill compute similarities lazily instead."
-                )
-                graph_simi = GraphSimilarity(graph_u2p)
+            graph_simi = np.zeros(np.shape(graph_u2u))
+            nz_entries = []
+            for i in range(np.shape(graph_u2u)[0]):
+                for j in range(i+1, np.shape(graph_u2u)[0]):
+                    nz_entries.append([i, j])
+            self.logger.info(f'Calculating user-user similarity graph, {len(nz_entries)} edges to go...')
+            sz = 1000
+            n_batch = math.ceil(len(nz_entries) / sz)
+            batches = np.array_split(nz_entries, n_batch)
+            pool = Pool()
+            results = pool.map(get_simi_single_iter, [(entries_batch, graph_u2p) for entries_batch in batches])
+            results = list(zip(*results))
+            row = np.concatenate(results[0])
+            col = np.concatenate(results[1])
+            dat = np.concatenate(results[2])
+            for x in range(len(row)):
+                graph_simi[row[x], col[x]] = dat[x]
+                graph_simi[col[x], row[x]] = dat[x]
+            pickle.dump(graph_simi, open(graph_simi_file, "wb"))
+            self.logger.info('Calculated user-user similarity and saved it for catch.')
 
         assert len(labels) == np.shape(graph_u2p)[0] == np.shape(graph_u2u)[0]
-        if ds == "alpha":
-            labeled_nodes = np.where(labels >= 0)[0]
-            (
-                test_indexs_cls,
-                val_indexs_cls,
-                train_indexs_cls,
-            ) = self._split_data_cls_limited(labeled_nodes)
+        if ds == 'alpha':
+            labeled_nodes = np.where(labels>=0)[0]
+            test_indexs_cls, val_indexs_cls, train_indexs_cls = self._split_data_cls_limited(labeled_nodes)
         else:
-            test_indexs_cls, val_indexs_cls, train_indexs_cls = self._split_data_cls(
-                len(labels)
-            )
+            test_indexs_cls, val_indexs_cls, train_indexs_cls = self._split_data_cls(len(labels))
 
-        setattr(self, dataSet + "_train", np.arange(np.shape(graph_u2p)[0]))
-        setattr(self, dataSet + "_cls_test", test_indexs_cls)
-        setattr(self, dataSet + "_cls_val", val_indexs_cls)
-        setattr(self, dataSet + "_cls_train", train_indexs_cls)
-        setattr(self, dataSet + "_u2p", graph_u2p)
-        setattr(self, dataSet + "_u2u", graph_u2u)
-        setattr(self, dataSet + "_simi", graph_simi)
-        setattr(self, dataSet + "_labels", labels)
+        setattr(self, dataSet+'_train', np.arange(np.shape(graph_u2p)[0]))
+        setattr(self, dataSet+'_cls_test', test_indexs_cls)
+        setattr(self, dataSet+'_cls_val', val_indexs_cls)
+        setattr(self, dataSet+'_cls_train', train_indexs_cls)
+        setattr(self, dataSet+'_u2p', graph_u2p)
+        setattr(self, dataSet+'_u2u', graph_u2u)
+        setattr(self, dataSet+'_simi', graph_simi)
+        setattr(self, dataSet+'_labels', labels)
 
     def get_train(self):
         training_cps = defaultdict(list)
-        g_u2u = getattr(self, self.ds + "_u2u")
+        g_u2u = getattr(self, self.ds+'_u2u')
         n = np.shape(g_u2u)[0]
         for i in range(n):
-            line = g_u2u[i]
-            pos_pool = line.nonzero()[1]
-            pos_pool_set = set()
-            neg_pool = [x for x in range(n) if x not in pos_pool_set]
+            line = g_u2u[i].toarray().squeeze()
+            pos_pool = np.where(line != 0)[0]
+            neg_pool = np.where(line == 0)[0]
             if len(pos_pool) <= 10:
                 pos_nodes = pos_pool
             else:
@@ -115,50 +89,10 @@ class DataLoader:
                 neg_nodes = neg_pool
             else:
                 neg_nodes = np.random.choice(neg_pool, 10, replace=False)
-
             for pos_n in pos_nodes:
                 training_cps[i].append((i, pos_n))
             for neg_n in neg_nodes:
                 training_cps[i].append((i, neg_n))
-        return training_cps
-
-    def get_train2(self):
-        training_cps = []
-        g_u2u = getattr(self, self.ds + "_u2u")
-        n = np.shape(g_u2u)[0]
-        all_indices = np.arange(g_u2u.shape[1])
-        for i in range(n):
-            line = g_u2u[i]
-            pos_pool = line.nonzero()[1]
-            neg_pool = np.setdiff1d(all_indices, pos_pool)
-            if len(pos_pool) <= 10:
-                pos_nodes = pos_pool
-            else:
-                pos_nodes = np.random.choice(pos_pool, 10, replace=False)
-            if len(neg_pool) <= 10:
-                neg_nodes = neg_pool
-            else:
-                neg_nodes = np.random.choice(neg_pool, 10, replace=False)
-            training_cps.append((pos_nodes, neg_nodes))
-        return training_cps
-
-    def get_train_fast(self):
-        """Assumes that there are few positive nodes for any node,
-        so a sample from all nodes will be mostly negative nodes.
-        """
-        training_cps = []
-        g_u2u = getattr(self, self.ds + "_u2u")
-        n = np.shape(g_u2u)[0]
-        all_indices = np.arange(g_u2u.shape[1])
-        for i in range(n):
-            line = g_u2u[i]
-            pos_pool = line.nonzero()[1]
-            if len(pos_pool) <= 10:
-                pos_nodes = pos_pool
-            else:
-                pos_nodes = np.random.choice(pos_pool, 10, replace=False)
-            mostly_neg_nodes = np.random.choice(all_indices, 10, replace=False)
-            training_cps.append((pos_nodes, mostly_neg_nodes))
         return training_cps
 
     def _split_data_cls(self, num_nodes, test_split=3, val_split=6):
@@ -169,12 +103,12 @@ class DataLoader:
         train_size = num_nodes - (test_size + val_size)
 
         test_indexs = rand_indices[:test_size]
-        val_indexs = rand_indices[test_size : (test_size + val_size)]
-        train_indexs = rand_indices[(test_size + val_size) :]
+        val_indexs = rand_indices[test_size:(test_size+val_size)]
+        train_indexs = rand_indices[(test_size+val_size):]
 
         return test_indexs, val_indexs, train_indexs
 
-    def _split_data_cls_limited(self, nodes, test_split=4, val_split=4):
+    def _split_data_cls_limited(self, nodes, test_split = 4, val_split = 4):
         # used when only limited nodes are labeled
         np.random.shuffle(nodes)
 
@@ -183,7 +117,7 @@ class DataLoader:
         train_size = len(nodes) - (test_size + val_size)
 
         val_indexs = nodes[:test_size]
-        test_indexs = nodes[test_size : (test_size + val_size)]
-        train_indexs = nodes[(test_size + val_size) :]
+        test_indexs = nodes[test_size:(test_size+val_size)]
+        train_indexs = nodes[(test_size+val_size):]
 
         return test_indexs, val_indexs, train_indexs
