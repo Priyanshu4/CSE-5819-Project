@@ -34,6 +34,10 @@ parser.add_argument('--alpha', type=float, default=10)
 parser.add_argument('--beta', type=float, default=20)
 parser.add_argument('--gamma', type=float, default=0.001)
 parser.add_argument('--lr', type=float, default=0.025)
+
+parser.add_argument('--lazy_simi', type=int, default=1)
+
+
 args = parser.parse_args()
 args.argv = sys.argv
 

@@ -9,7 +9,7 @@ import pathlib
 import numpy as np
 from multiprocessing import Pool
 from scipy.sparse import csr_matrix
-from similarity import GraphSimilarity
+from src.similarity import GraphSimilarity
 
 from src.utils import *
 from collections import defaultdict, Counter
@@ -32,45 +32,50 @@ class DataLoader():
         graph_u2p = pickle.load(open(graph_u2p_file, 'rb'))
         labels = pickle.load(open(labels_file, 'rb'))
         graph_u2p[graph_u2p > 0] = 1
-        graph_u2u = graph_u2p @ graph_u2p.T
+        graph_u2u = graph_u2p @ graph_u2p.T 
+
+
         if os.path.isfile(graph_simi_file):
             graph_simi = pickle.load(open(graph_simi_file, 'rb'))
             self.logger.info('loaded similarity graph from cache')
         else:
-            try:
-                graph_simi = np.zeros(np.shape(graph_u2u))
-                nz_entries = []
-                for i in range(np.shape(graph_u2u)[0]):
-                    for j in range(i + 1, np.shape(graph_u2u)[0]):
-                        nz_entries.append([i, j])
-                self.logger.info(
-                    f"Calculating user-user similarity graph, {len(nz_entries)} edges to go..."
-                )
-                sz = 1000
-                n_batch = math.ceil(len(nz_entries) / sz)
-                batches = np.array_split(nz_entries, n_batch)
-                pool = Pool()
-                results = pool.map(
-                    get_simi_single_iter,
-                    [(entries_batch, graph_u2p) for entries_batch in batches],
-                )
-                results = list(zip(*results))
-                row = np.concatenate(results[0])
-                col = np.concatenate(results[1])
-                dat = np.concatenate(results[2])
-                for x in range(len(row)):
-                    graph_simi[row[x], col[x]] = dat[x]
-                    graph_simi[col[x], row[x]] = dat[x]
-                pickle.dump(graph_simi, open(graph_simi_file, "wb"))
-                self.logger.info(
-                    "Calculated user-user similarity and saved it for catch."
-                )
-            except np.core._exceptions._ArrayMemoryError as e:
-                print(
-                    "Cannot fit user similarity array in memory! "
-                    + f" See exception below:\n{str(e)}"
-                    + "\nWill compute similarities lazily instead."
-                )
+            if not self.args.lazy_simi:
+                try:
+                    graph_simi = np.zeros(np.shape(graph_u2u))
+                    nz_entries = []
+                    for i in range(np.shape(graph_u2u)[0]):
+                        for j in range(i + 1, np.shape(graph_u2u)[0]):
+                            nz_entries.append([i, j])
+                    self.logger.info(
+                        f"Calculating user-user similarity graph, {len(nz_entries)} edges to go..."
+                    )
+                    sz = 1000
+                    n_batch = math.ceil(len(nz_entries) / sz)
+                    batches = np.array_split(nz_entries, n_batch)
+                    pool = Pool()
+                    results = pool.map(
+                        get_simi_single_iter,
+                        [(entries_batch, graph_u2p) for entries_batch in batches],
+                    )
+                    results = list(zip(*results))
+                    row = np.concatenate(results[0])
+                    col = np.concatenate(results[1])
+                    dat = np.concatenate(results[2])
+                    for x in range(len(row)):
+                        graph_simi[row[x], col[x]] = dat[x]
+                        graph_simi[col[x], row[x]] = dat[x]
+                    pickle.dump(graph_simi, open(graph_simi_file, "wb"))
+                    self.logger.info(
+                        "Calculated user-user similarity and saved it for catch."
+                    )
+                except np.core._exceptions._ArrayMemoryError as e:
+                    print(
+                        "Cannot fit user similarity array in memory! "
+                        + f" See exception below:\n{str(e)}"
+                        + "\nWill compute similarities lazily instead."
+                    )
+                    graph_simi = GraphSimilarity(graph_u2p)
+            else:
                 graph_simi = GraphSimilarity(graph_u2p)
 
         assert len(labels) == np.shape(graph_u2p)[0] == np.shape(graph_u2u)[0]
