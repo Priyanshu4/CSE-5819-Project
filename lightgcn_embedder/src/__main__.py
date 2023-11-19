@@ -87,6 +87,6 @@ if __name__ == "__main__":
         train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
 
     user_embs, item_embs = lightgcn()
-    embeddings_save_file = EMBEDDINGS_PATH / f'{utils.current_timestamp()}.pkl'
-    pickle.dump(user_embs, open(embeddings_save_file), 'wb')
+    embeddings_save_file = EMBEDDINGS_PATH / f'embs_{utils.current_timestamp()}.pkl'
+    pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
     logger.info(f"Saved user embeddings to {embeddings_save_file}")
