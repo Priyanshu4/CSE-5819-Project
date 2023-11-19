@@ -7,6 +7,12 @@ from pathlib import Path
 from datetime import datetime
 from sampling import set_sampling_seed
 
+
+def current_timestamp():
+    now = datetime.now()
+    timestamp = now.strftime("%Y_%m_%d_%H_%M")
+    return timestamp
+
 def configure_logger(name: str, log_dir: Path, log_level: str = "info") -> logging.Logger:
     log_levels = {
         'debug': logging.DEBUG,
@@ -21,9 +27,8 @@ def configure_logger(name: str, log_dir: Path, log_level: str = "info") -> loggi
     logger.setLevel(log_levels.get(log_level, logging.INFO))
 
     # Create a file handler which logs messages
-    now = datetime.now()
-    timestamp = now.strftime("%Y_%m_%d_%H_%M")
-    log_file = log_dir / (timestamp + ".log")
+
+    log_file = log_dir / (current_timestamp() + ".log")
     file_handler = logging.FileHandler(log_file)
     file_format = '%(asctime)s - [%(levelname)s] - [%(name)s] - %(message)s'
     file_handler.setFormatter(logging.Formatter(file_format))
@@ -46,6 +51,7 @@ def set_seed(seed: int):
     torch.manual_seed(seed)
     set_sampling_seed(seed)
 
+
 def sparse_matrix_to_tensor(X) -> torch.sparse.FloatTensor:
     coo = X.tocoo().astype(np.float32)
     row = torch.Tensor(coo.row).long()
@@ -54,6 +60,7 @@ def sparse_matrix_to_tensor(X) -> torch.sparse.FloatTensor:
     data = torch.FloatTensor(coo.data)
     return torch.sparse.FloatTensor(index, data, torch.Size(coo.shape))
     
+
 class timer:
     """
     Time context manager for code block

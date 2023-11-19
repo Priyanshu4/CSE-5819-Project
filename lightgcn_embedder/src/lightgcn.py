@@ -66,7 +66,16 @@ class LightGCN(nn.Module):
             )
             logger.info("Using pretrained weights")
         self.f = nn.Sigmoid()
-        self.Graph = utils.sparse_matrix_to_tensor(self.dataset.graph_u2i)
+
+        if self.config.A_split:
+            # Get an adjacency matrix split into a list of folds and convert to tensors
+            self.Graph = self.dataset.get_adj_mat_split(self.A_split)
+            for i, fold in enumerate(self.Graph):
+                self.Graph[i] = utils.sparse_matrix_to_tensor(fold).coalesce().to(self.config.device)
+            logger.info(f"Split adjacency matrix in {self.A_split} folds.")
+        else:
+            self.Graph = utils.sparse_matrix_to_tensor(self.dataset.graph_adj_mat).to(self.config.device)
+
         logger.info(f"LightGCN is ready to go! (dropout:{self.config.train_config.dropout})")
 
     def __dropout_x(self, x, keep_prob):
@@ -132,9 +141,15 @@ class LightGCN(nn.Module):
         neg_emb_ego = self.embedding_item(neg_items)
         return users_emb, pos_emb, neg_emb, users_emb_ego, pos_emb_ego, neg_emb_ego
 
-    def forward(self, users, items):
+    def forward(self, users = None, items = None):
         # compute embedding
         all_users, all_items = self.computer()
-        users_emb = all_users[users]
-        items_emb = all_items[items]
+        if users is None:
+            users_emb = all_users
+        else:
+            users_emb = all_users[users] 
+        if items is None:
+            items_emb = all_items
+        else:
+            items_emb = all_items[items]
         return users_emb, items_emb

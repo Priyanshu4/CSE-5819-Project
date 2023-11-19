@@ -40,7 +40,7 @@ class SimilarityLoss(ModelLoss):
         simi_feat = []
         simi_embs = []
         for node_i in user_nodes:
-            for sample_index in samples.shape[1]:
+            for sample_index in range(samples.shape[1]):
                 node_j = samples[node_i, sample_index]
                 simi_feat.append(torch.FloatTensor([self.graph_simi[node_i, node_j]]))
                 dis_ij = (user_embs[node2index[node_i]] - user_embs[node2index[node_j]]) ** 2

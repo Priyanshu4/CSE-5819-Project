@@ -79,14 +79,21 @@ def _sample_train_set_pos_neg_users_fast(dataset, n_pos, n_neg):
 
 def BPR_UniformSample_original(dataset, neg_ratio = 1):
     dataset : BasicDataset
-    allPos = dataset.allPos
     start = time()
     if _sample_ext:
         S = _sampling.sample_negative(dataset.n_users, dataset.m_items,
-                                     dataset.trainDataSize, allPos, neg_ratio)
+                                     dataset.trainDataSize, _get_positive_items(dataset), neg_ratio)
     else:
         S = _BPR_UniformSample_original_python(dataset)
     return S
+
+def _get_positive_items(dataset):
+    allPos = []
+    for i in range(dataset.graph_u2i.shape[0]):
+        row_slice = dataset.graph_u2i[i] 
+        indices = row_slice.nonzero()[1]
+        allPos.append(indices)
+    return allPos
 
 def _BPR_UniformSample_original_python(dataset):
     """
@@ -96,9 +103,13 @@ def _BPR_UniformSample_original_python(dataset):
     """
     total_start = time()
     dataset : BasicDataset
-    user_num = dataset.trainDataSize
+    #user_num = dataset.trainDataSize
+    user_num = dataset.n_users
     users = np.random.randint(0, dataset.n_users, user_num)
-    allPos = dataset.allPos
+    
+    # List of positive item indices in each row
+    allPos = _get_positive_items(dataset)
+
     S = []
     sample_time1 = 0.
     sample_time2 = 0.

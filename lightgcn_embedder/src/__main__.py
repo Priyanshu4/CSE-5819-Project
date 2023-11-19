@@ -8,10 +8,12 @@ from lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
 from loss import SimilarityLoss, BPRLoss
 import training
 from pathlib import Path
+import pickle
 
 CONFIGS_PATH = Path(__file__).parent.parent / "configs"
 DATASET_CONFIG = CONFIGS_PATH / "datasets.json"
 LOGS_PATH = Path(__file__).parent.parent / "results" / "logs"
+EMBEDDINGS_PATH = Path(__file__).parent.parent / "results" / "embeddings"
 
 if __name__ == "__main__":
 
@@ -35,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=1000)
     parser.add_argument("--multicore", type=int, default=0, help="whether we use multiprocessing or not in test")
     parser.add_argument("--pretrain", type=int, default=0, help="whether we use pretrained weight or not")
-    parser.add_argument("--seed", type=int, default=2023, help="random seed")
+    parser.add_argument("--seed", type=int, default=5819, help="random seed")
     args = parser.parse_args()
 
     logger = utils.configure_logger("Logger", LOGS_PATH, "info")
@@ -68,7 +70,8 @@ if __name__ == "__main__":
 
     lightgcn = LightGCN(lightgcn_config, dataset, logger)
     optimizer = torch.optim.Adam(lightgcn.parameters(), lr=train_config.learning_rate, weight_decay=train_config.weight_decay)
-    loss = SimilarityLoss(dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
+    #loss = SimilarityLoss(dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
+    loss = BPRLoss(dataset, weight_decay=train_config.weight_decay)
 
     train_lightgcn = None
     if type(loss) == SimilarityLoss:
@@ -82,3 +85,8 @@ if __name__ == "__main__":
 
     for epoch in range(train_config.epochs):
         train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
+
+    user_embs, item_embs = lightgcn()
+    embeddings_save_file = EMBEDDINGS_PATH / f'{utils.current_timestamp()}.pkl'
+    pickle.dump(user_embs, open(embeddings_save_file), 'wb')
+    logger.info(f"Saved user embeddings to {embeddings_save_file}")

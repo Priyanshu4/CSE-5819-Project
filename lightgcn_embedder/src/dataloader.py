@@ -1,7 +1,7 @@
 from pathlib import Path
 import pickle
 import json
-
+import scipy.sparse
 
 class DataLoader:
 
@@ -49,13 +49,22 @@ class BasicDataset:
         raise NotImplementedError
 
     @property
+    def graph_adj_mat(self):
+        """Adjacency matrix of user to item graph as scipy sparse matrix.
+           The matrix has shape (n_users + m_items, n_users + m_items) 
+        """
+        raise NotImplementedError
+    
+    @property
     def graph_u2i(self):
-        """User to item graph as scipy sparse matrix"""
+        """User to item graph as scipy sparse matrix of shape (n_users, m_items)"""
         raise NotImplementedError
 
     @property
     def graph_u2u(self):
-        """User to user graph as scipy sparse matrix"""
+        """User to user relationships as scipy sparse matrix of shape (n_users, n_users)
+           This is not the adjacency matrix of users, instead this is u2i @ u2i.T
+        """
         raise NotImplementedError
 
     @property
@@ -66,6 +75,21 @@ class BasicDataset:
         """
         raise NotImplementedError
 
+    def get_adj_mat_split(self, folds):
+        """ Returns the adjacency matrix split into a list of folds.
+            The list has length equal to the number of folds.
+            Each fold has shape (n+m)/n_folds x (n+m)
+        """
+        adj_folds = []
+        fold_len = (self.n_users + self.m_items) // folds
+        for i_fold in range(folds):
+            start = i_fold*fold_len
+            if i_fold == folds - 1:
+                end = self.n_users + self.m_items
+            else:
+                end = (i_fold + 1) * fold_len
+            adj_folds.append(self.graph_adj_mat[start:end].copy())
+        return adj_folds
 
 class PickleDataset(BasicDataset):
     def __init__(self, u2i_pkl_path: Path, user_labels_pkl_path: Path):
@@ -77,6 +101,15 @@ class PickleDataset(BasicDataset):
             raise ValueError(
                 "Number of labels does not match number of users from graph!"
             )
+        
+        # Build full adjancency matrix of size (n_users + m_items, n_users + m_items) 
+        # Users have no connections to each other and items have no connections to each other
+        zero_matrix_user = scipy.sparse.csr_matrix((self._n_users, self._n_users))
+        zero_matrix_item = scipy.sparse.csr_matrix((self._m_items, self._m_items))        
+        self._graph_adj_mat = scipy.sparse.vstack([
+            scipy.sparse.hstack([zero_matrix_user, self._graph_u2i]),
+            scipy.sparse.hstack([self._graph_u2i.T, zero_matrix_item])
+        ]).tocsr()
 
     @property
     def n_users(self):
@@ -87,13 +120,22 @@ class PickleDataset(BasicDataset):
         return self._m_items
 
     @property
+    def graph_adj_mat(self):
+        """Adjacency matrix of user to item graph as scipy sparse matrix.
+           The matrix has shape (n_users + m_items, n_users + m_items) 
+        """
+        return self._graph_adj_mat
+    
+    @property
     def graph_u2i(self):
-        """User to item graph as scipy sparse matrix"""
+        """User to item graph as scipy sparse matrix of shape (n_users, m_items)"""
         return self._graph_u2i
 
     @property
     def graph_u2u(self):
-        """User to user graph as scipy sparse matrix"""
+        """User to user relationships as scipy sparse matrix of shape (n_users, n_users)
+           This is not the adjacency matrix of users, instead this is u2i @ u2i.T
+        """
         return self._graph_u2u
 
     @property
@@ -109,3 +151,6 @@ class YelpDataset(PickleDataset):
     """ A pickle dataset that also has Yelp review metadata
     """
     pass
+
+
+

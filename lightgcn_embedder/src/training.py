@@ -24,7 +24,7 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
 
     # Get indices of all nodes in random order
     user_nodes = np.random.permutation(dataset.n_users)
-    item_nodes = np.random.arange(dataset.m_items)
+    item_nodes = np.arange(dataset.m_items)
     n_batches = math.ceil(len(user_nodes) // batch_size)
 
     optimizer.zero_grad()
