@@ -80,6 +80,39 @@ class timer:
             return -1
 
     @staticmethod
+    def format_time_dhms(seconds):
+        """
+        Format time in seconds to days, hours, minutes, and seconds
+        For example, 10000 seconds is 2h 46m 40s
+        """
+        # Calculate days, hours, minutes and seconds
+        days, remaining_seconds = divmod(seconds, 86400)
+        hours, remaining_seconds = divmod(remaining_seconds, 3600)
+        minutes, remaining_seconds = divmod(remaining_seconds, 60)
+
+        time_str = f"{remaining_seconds:05.2f}s"
+        if seconds >= 60:
+            time_str = f"{int(minutes):02d}m " + time_str
+        if seconds >= 3600:
+            time_str = f"{int(hours):02d}h " + time_str
+        if seconds >= 86400:
+            time_str = f"{int(days):01d}d " + time_str
+
+        return time_str
+    
+    @staticmethod
+    def formatted_tape_str(select_keys=None):
+        hint = "|"
+        if select_keys is None:
+            for key, value in timer.NAMED_TAPE.items():
+                hint = hint + f"{key}:{timer.format_time_dhms(value)}|"
+        else:
+            for key in select_keys:
+                value = timer.NAMED_TAPE[key]
+                hint = hint + f"{key}:{timer.format_time_dhms(value)}|"
+        return hint
+    
+    @staticmethod
     def dict(select_keys=None):
         hint = "|"
         if select_keys is None:
@@ -91,6 +124,8 @@ class timer:
                 hint = hint + f"{key}:{value:.2f}|"
         return hint
 
+
+    
     @staticmethod
     def zero(select_keys=None):
         if select_keys is None:
@@ -99,6 +134,8 @@ class timer:
         else:
             for key in select_keys:
                 timer.NAMED_TAPE[key] = 0
+
+    
 
     def __init__(self, tape=None, **kwargs):
         if kwargs.get('name'):

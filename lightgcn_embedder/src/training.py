@@ -105,38 +105,38 @@ def train_lightgcn_bpr_loss(dataset: BasicDataset, model: LightGCN, bpr_loss: BP
     batch_size = config.batch_size
     device = model_config.device
 
-    with utils.timer(name="Sample"):
+    with utils.timer(name="BPR_Sampling"):
         S = sampling.BPR_UniformSample_original(dataset)
         
-    users = torch.Tensor(S[:, 0]).long()
-    posItems = torch.Tensor(S[:, 1]).long()
-    negItems = torch.Tensor(S[:, 2]).long()
+        users = torch.Tensor(S[:, 0]).long()
+        posItems = torch.Tensor(S[:, 1]).long()
+        negItems = torch.Tensor(S[:, 2]).long()
 
-    users = users.to(device)
-    posItems = posItems.to(device)
-    negItems = negItems.to(device)
-    users, posItems, negItems = shuffle(users, posItems, negItems)
+        users = users.to(device)
+        posItems = posItems.to(device)
+        negItems = negItems.to(device)
+        users, posItems, negItems = shuffle(users, posItems, negItems)
 
-    n_batches = len(users) // batch_size + 1
+    with utils.timer(name="BPR_Training"):
+        n_batches = len(users) // batch_size + 1
+        loss_sum = 0.
+        for (batch_i,
+            (batch_users,
+            batch_pos,
+            batch_neg)) in enumerate(minibatch(batch_size, 
+                                                    users,
+                                                    posItems,
+                                                    negItems)):
 
-    loss_sum = 0.
-    for (batch_i,
-         (batch_users,
-          batch_pos,
-          batch_neg)) in enumerate(minibatch(batch_size, 
-                                                   users,
-                                                   posItems,
-                                                   negItems)):
+            loss = bpr_loss.get_loss(*model.getEmbeddingsForBPR(batch_users, batch_pos, batch_neg))
 
-        loss = bpr_loss.get_loss(*model.getEmbeddingsForBPR(batch_users, batch_pos, batch_neg))
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        loss_sum += loss.item()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            loss_sum += loss.item()
 
     avg_loss = loss_sum / n_batches
-    time_info = utils.timer.dict()
+    time_info = utils.timer.formatted_tape_str(select_keys=["BPR_Sampling", "BPR_Training"])
     utils.timer.zero()
 
     logger.info(f"EPOCH {epoch} complete. Average Loss: {avg_loss:.4f}, Time: {time_info}")            

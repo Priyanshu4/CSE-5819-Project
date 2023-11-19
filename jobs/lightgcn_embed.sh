@@ -5,7 +5,7 @@
 #SBATCH --constraint='skylake'
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=priyanshu.agrawal+hpc@uconn.edu      # Destination email address
+#SBATCH --mail-user=priyanshu.agrawal+hpc@uconn.edu      
 #SBATCH --mem=20G
 
 module purge
@@ -16,4 +16,4 @@ conda activate fake-review-detection-env
 
 cd ../lightgcn_embedder/src
 
-python __main__.py --dataset yelpnyc --epochs 500
+python __main__.py --dataset yelpnyc --epochs 100
