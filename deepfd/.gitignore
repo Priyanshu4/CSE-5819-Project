@@ -3,6 +3,7 @@ data/
 logs/
 models/
 results/
+deepfd-env/
 .vscode/
 
 # Byte-compiled / optimized / DLL files
