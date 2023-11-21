@@ -1,1 +1,1 @@
-{"dataset_name": "synthethic_easy_1000", "dataset_comment": "Easy synthetic dataset with one group of 1000 fraudsters", "n_users": 10000, "n_items": 100, "n_legitimate_ratings": 30000, "fraud_group_sizes": [[1000, 10]]}
+{"dataset_name": "synthetic_easy_1000", "dataset_comment": "Easy synthetic dataset with one group of 1000 fraudsters", "n_users": 10000, "n_items": 100, "n_legitimate_ratings": 30000, "fraud_group_sizes": [[1000, 10]]}
