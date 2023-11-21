@@ -1,14 +1,15 @@
-import utils
 import torch
-from dataloader import DataLoader
 import multiprocessing
-from similarity import GraphSimilarity
 import argparse
-from lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
-from loss import SimilarityLoss, BPRLoss
-import training
 from pathlib import Path
 import pickle
+
+from dataloader import DataLoader
+from similarity import GraphSimilarity
+from lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
+from loss import SimilarityLoss, BPRLoss
+import utils
+import training
 
 CONFIGS_PATH = Path(__file__).parent.parent / "configs"
 DATASET_CONFIG = CONFIGS_PATH / "datasets.json"
@@ -38,14 +39,20 @@ if __name__ == "__main__":
     parser.add_argument("--multicore", type=int, default=0, help="whether we use multiprocessing or not in test")
     parser.add_argument("--pretrain", type=int, default=0, help="whether we use pretrained weight or not")
     parser.add_argument("--seed", type=int, default=5819, help="random seed")
+    parser.add_argument("--name", type=str, default="", help="The name to add to the embs file and log file names.")
     args = parser.parse_args()
 
-    logger = utils.configure_logger("Logger", LOGS_PATH, "info")
+    logger = utils.configure_logger("Logger", LOGS_PATH, args.name, "info")
     dataset = dataloader.load_dataset(args.dataset)
 
     GPU = torch.cuda.is_available()
     device = torch.device("cuda" if GPU else "cpu")
     CORES = multiprocessing.cpu_count() // 2
+
+    if GPU: 
+        logger.info(f"CUDA GPA will be used for training.")
+    else:
+        logger.info(f"No GPU available. CPU will be used for training.")
 
     utils.set_seed(args.seed)
     logger.info(f"SEED: {args.seed}")
@@ -87,6 +94,6 @@ if __name__ == "__main__":
         train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
 
     user_embs, item_embs = lightgcn()
-    embeddings_save_file = EMBEDDINGS_PATH / f'embs_{utils.current_timestamp()}.pkl'
+    embeddings_save_file = EMBEDDINGS_PATH / f'embs_{args.name}_{utils.current_timestamp()}.pkl'
     pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
     logger.info(f"Saved user embeddings to {embeddings_save_file}")

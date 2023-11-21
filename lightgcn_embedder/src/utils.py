@@ -13,7 +13,7 @@ def current_timestamp():
     timestamp = now.strftime("%Y_%m_%d_%H_%M")
     return timestamp
 
-def configure_logger(name: str, log_dir: Path, log_level: str = "info") -> logging.Logger:
+def configure_logger(name: str, log_dir: Path, filename: str = "", log_level: str = "info") -> logging.Logger:
     log_levels = {
         'debug': logging.DEBUG,
         'info': logging.INFO,
@@ -28,7 +28,7 @@ def configure_logger(name: str, log_dir: Path, log_level: str = "info") -> loggi
 
     # Create a file handler which logs messages
 
-    log_file = log_dir / (current_timestamp() + ".log")
+    log_file = log_dir / (filename + "_" + current_timestamp() + ".log")
     file_handler = logging.FileHandler(log_file)
     file_format = '%(asctime)s - [%(levelname)s] - [%(name)s] - %(message)s'
     file_handler.setFormatter(logging.Formatter(file_format))

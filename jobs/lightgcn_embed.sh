@@ -1,8 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=general
 #SBATCH --ntasks=12
-#SBATCH --constraint='skylake'
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=priyanshu.agrawal+hpc@uconn.edu      
@@ -16,4 +14,4 @@ conda activate fake-review-detection-env
 
 cd ../lightgcn_embedder/src
 
-python __main__.py --dataset yelpnyc --epochs 100
+python __main__.py --dataset yelpnyc --epochs 100 --name bpr_100epochs_64d 
