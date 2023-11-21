@@ -1,0 +1,11 @@
+{
+    "yelpnyc": {
+        "dataset_type": "pickle",
+        "pickle_protocol": 4,
+        "filepaths": {
+            "graph_u2i": "../data/yelpnyc/yelpnyc_graph_u2p.pkl",
+            "labels": "../data/yelpnyc/yelpnyc_labels.pkl",
+            "graph_u2u_simi": "../data/yelpnyc/yelpnyc_graph_u2p_simi.pkl"
+        }
+    }
+}
