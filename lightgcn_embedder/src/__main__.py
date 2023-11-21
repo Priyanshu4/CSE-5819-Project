@@ -80,10 +80,10 @@ if __name__ == "__main__":
         raise ValueError(f"Optimizer {args.optimizer} is not supported.")
     
     if args.loss == "bpr":
-        loss = BPRLoss(dataset, weight_decay=train_config.weight_decay)
+        loss = BPRLoss(device, dataset, weight_decay=train_config.weight_decay)
         train_lightgcn = training.train_lightgcn_simi_loss
     elif args.loss == "simi":
-        loss = SimilarityLoss(dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
+        loss = SimilarityLoss(device, dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
         train_lightgcn = training.train_lightgcn_simi_loss
     else:
         logger.error(f"Loss function {args.loss} is not supported.")

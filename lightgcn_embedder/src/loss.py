@@ -8,7 +8,8 @@ from similarity import GraphSimilarity
 class ModelLoss:
 
 
-    def __init__(self, dataset: BasicDataset):
+    def __init__(self, device: torch.device, dataset: BasicDataset):
+        self.device = device
         self.dataset = dataset
         pass
 
@@ -20,8 +21,8 @@ class SimilarityLoss(ModelLoss):
        Similarities are only computed between each node and its samples to avoid computing all pairwise similarities.
     """
 
-    def __init__(self, dataset: BasicDataset, graph_simi: GraphSimilarity, n_pos: int, n_neg: int, fast_sampling: bool = False):
-        super().__init__(dataset)
+    def __init__(self, device: torch.device, dataset: BasicDataset, graph_simi: GraphSimilarity, n_pos: int, n_neg: int, fast_sampling: bool = False):
+        super().__init__(device, dataset)
         self.graph_simi = graph_simi
         self.n_pos = n_pos
         self.n_neg = n_neg
@@ -66,8 +67,8 @@ class SimilarityLoss(ModelLoss):
 
 class BPRLoss(ModelLoss):
 
-    def __init__(self, dataset: BasicDataset, weight_decay: float):
-        super().__init__(dataset)
+    def __init__(self, device: torch.device, dataset: BasicDataset, weight_decay: float):
+        super().__init__(device, dataset)
         self.weight_decay = weight_decay
 
     def get_loss(self, users_emb, pos_emb, neg_emb, users_emb_ego, pos_emb_ego, neg_emb_ego):
