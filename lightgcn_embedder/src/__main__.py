@@ -22,22 +22,15 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Go lightGCN")
     parser.add_argument("--batch_size", type=int, default=2048, help="the batch size for training procedure")
-    parser.add_argument("--recdim", type=int, default=64, help="the embedding size of lightGCN")
+    parser.add_argument("--dim", type=int, default=64, help="the embedding size of lightGCN")
     parser.add_argument("--layer", type=int, default=3, help="the layer num of lightGCN")
     parser.add_argument("--lr", type=float, default=0.001, help="the learning rate")
     parser.add_argument("--decay", type=float, default=1e-4, help="the weight decay for l2 normalizaton")
     parser.add_argument("--dropout", type=int, default=0, help="using the dropout or not")
     parser.add_argument("--keepprob", type=float, default=0.6, help="the dropout keep prob")
     parser.add_argument("--a_fold", type=int, default=100, help="the fold num used to split large adj matrix")
-    parser.add_argument("--testbatch", type=int, default=100, help="the batch size of users for testing")
     parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataloader.dataset_names}")
-    parser.add_argument("--path", type=str, default="./checkpoints", help="path to save weights")
-    parser.add_argument("--topks", nargs="?", default="[20]", help="@k test list")
-    parser.add_argument("--comment", type=str, default="lgn")
-    parser.add_argument("--load", type=int, default=0)
     parser.add_argument("--epochs", type=int, default=1000)
-    parser.add_argument("--multicore", type=int, default=0, help="whether we use multiprocessing or not in test")
-    parser.add_argument("--pretrain", type=int, default=0, help="whether we use pretrained weight or not")
     parser.add_argument("--seed", type=int, default=5819, help="random seed")
     parser.add_argument("--name", type=str, default="", help="The name to add to the embs file and log file names.")
     args = parser.parse_args()
@@ -47,7 +40,6 @@ if __name__ == "__main__":
 
     GPU = torch.cuda.is_available()
     device = torch.device("cuda" if GPU else "cpu")
-    CORES = multiprocessing.cpu_count() // 2
 
     if GPU: 
         logger.info(f"CUDA GPA will be used for training.")
@@ -67,7 +59,7 @@ if __name__ == "__main__":
     )
 
     lightgcn_config = LightGCNConfig(
-        latent_dim = args.recdim,
+        latent_dim = args.dim,
         n_layers = args.layer,
         keep_prob = args.keepprob,
         A_split = args.a_fold,
