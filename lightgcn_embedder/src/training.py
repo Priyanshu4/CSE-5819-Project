@@ -47,7 +47,7 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
             loss = model_loss.get_loss(nodes_batch, user_embs=user_embs, extended_user_nodes_batch=extended_nodes_batch, samples=samples)
             loss_sum += loss.item()
 
-            model_loss.backward()
+            loss.backward()
             optimizer.step()
 
             optimizer.zero_grad()
