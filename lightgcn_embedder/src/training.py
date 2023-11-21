@@ -18,9 +18,10 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
     batch_size = config.batch_size
 
     # Generates positive and negative samples at the start of each epoch
-    logger.info(f"EP[{epoch}]: Sampling positive and negative user nodes...")
-    samples = model_loss.sample_train_set_pos_neg_users()
-    logger.info(f"EP[{epoch}]: Positive and negative user nodes sampled.")
+    logger.debug(f"EP[{epoch}]: Sampling positive and negative user nodes...")
+    with utils.timer(name="Sampling"):
+        samples = model_loss.sample_train_set_pos_neg_users()
+    logger.debug(f"EP[{epoch}]: Positive and negative user nodes sampled.")
 
     # Get indices of all nodes in random order
     user_nodes = np.random.permutation(dataset.n_users)
@@ -31,36 +32,41 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
     model.zero_grad()
 
     loss_sum = 0
+    avg_loss = 0
     visited_user_nodes = set()
 
-    for i in range(n_batches):
-        nodes_batch = user_nodes[i * batch_size: (i + 1) * batch_size]
-        extended_nodes_batch = model_loss.extend_user_node_batch(nodes_batch, samples)
+    with utils.timer(name="Training"):
+        for i in range(n_batches):
+            nodes_batch = user_nodes[i * batch_size: (i + 1) * batch_size]
+            extended_nodes_batch = model_loss.extend_user_node_batch(nodes_batch, samples)
 
-        # Add the nodes in this batch and the sampled nodes for this batch to visited set
-        visited_user_nodes |= set(extended_nodes_batch)
+            # Add the nodes in this batch and the sampled nodes for this batch to visited set
+            visited_user_nodes |= set(extended_nodes_batch)
 
-        user_embs, item_embs = model(extended_nodes_batch, item_nodes)
-        loss = model_loss.get_loss(nodes_batch, user_embs=user_embs, extended_user_nodes_batch=extended_nodes_batch, samples=samples)
-        loss_sum += loss.item()
+            user_embs, item_embs = model(extended_nodes_batch, item_nodes)
+            loss = model_loss.get_loss(nodes_batch, user_embs=user_embs, extended_user_nodes_batch=extended_nodes_batch, samples=samples)
+            loss_sum += loss.item()
 
-        model_loss.backward()
-        optimizer.step()
+            model_loss.backward()
+            optimizer.step()
 
-        optimizer.zero_grad()
-        model.zero_grad()
+            optimizer.zero_grad()
+            model.zero_grad()
 
-        logger.info(
-            f"EP[{epoch}], Batch [{i+1}/{n_batches}], Loss: {loss.item():.4f}, Dealed Nodes [{len(visited_user_nodes)}/{len(user_nodes)}]"
-        )
+            logger.debug(
+                f"EP[{epoch}], Batch [{i+1}/{n_batches}], Loss: {loss.item():.4f}, Dealed Nodes [{len(visited_user_nodes)}/{len(user_nodes)}]"
+            )
 
-        # Stop when all nodes are trained, this may be before all batches are used    
-        if len(visited_user_nodes) == len(user_nodes):
-            avg_loss = loss_sum / (i + 1)
-            logger.info(f"EPOCH {epoch} complete. Average Loss: {avg_loss:.4f} ")            
-            return avg_loss
+            # Stop when all nodes are trained, this may be before all batches are used    
+            if len(visited_user_nodes) == len(user_nodes):
+                avg_loss = loss_sum / (i + 1)
+                break
+    
+    time_info = utils.timer.formatted_tape_str(select_keys=["Sampling", "Training"])
+    utils.timer.zero()
+    logger.info(f"EPOCH {epoch} complete. Average Loss: {avg_loss:.4f}, Time: {time_info}")            
 
-    return
+    return avg_loss
 
 def minibatch(batch_size, *tensors):
 
