@@ -32,6 +32,8 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataloader.dataset_names}")
     parser.add_argument("--epochs", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=5819, help="random seed")
+    parser.add_argument("--loss", type=str, default="bpr", help="loss function, options: bpr, simi")
+    parser.add_argument("--optimizer", type=str, default="adam", help="optimizer, options: adam, sgd")
     parser.add_argument("--name", type=str, default="", help="The name to add to the embs file and log file names.")
     args = parser.parse_args()
 
@@ -68,17 +70,24 @@ if __name__ == "__main__":
     )
 
     lightgcn = LightGCN(lightgcn_config, dataset, logger)
-    optimizer = torch.optim.Adam(lightgcn.parameters(), lr=train_config.learning_rate, weight_decay=train_config.weight_decay)
-    #loss = SimilarityLoss(dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
-    loss = BPRLoss(dataset, weight_decay=train_config.weight_decay)
 
-    train_lightgcn = None
-    if type(loss) == SimilarityLoss:
-        train_lightgcn = training.train_lightgcn_simi_loss
-    elif type(loss) == BPRLoss:
-        train_lightgcn = training.train_lightgcn_bpr_loss
+    if args.optimizer == "adam":
+        optimizer = torch.optim.Adam(lightgcn.parameters(), lr=train_config.learning_rate, weight_decay=train_config.weight_decay)
+    elif args.optimizer == "sgd":
+        optimizer = torch.optim.SGD(lightgcn.parameters(), lr=train_config.learning_rate, weight_decay=train_config.weight_decay)
     else:
-        raise TypeError(f"Loss of type {type(loss)} is not supported.")
+        logger.error(f"Optimizer {args.optimizer} is not supported.")
+        raise ValueError(f"Optimizer {args.optimizer} is not supported.")
+    
+    if args.loss == "bpr":
+        loss = BPRLoss(dataset, weight_decay=train_config.weight_decay)
+        train_lightgcn = training.train_lightgcn_simi_loss
+    elif args.loss == "simi":
+        loss = SimilarityLoss(dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
+        train_lightgcn = training.train_lightgcn_simi_loss
+    else:
+        logger.error(f"Loss function {args.loss} is not supported.")
+        raise ValueError(f"Loss function {args.loss} is not supported.")
             
     logger.info(f"Training LightGCN on {args.dataset} with {loss.__class__.__name__} loss function and {optimizer.__class__.__name__} optimizer.")
 
