@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataloader.dataset_names}")
     parser.add_argument("--epochs", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=5819, help="random seed")
-    parser.add_argument("--loss", type=str, default="bpr", help="loss function, options: bpr, simi")
+    parser.add_argument("--loss", type=str, default="simi", help="loss function, options: bpr, simi")
     parser.add_argument("--optimizer", type=str, default="adam", help="optimizer, options: adam, sgd")
     parser.add_argument("--name", type=str, default="", help="The name to add to the embs file and log file names.")
     args = parser.parse_args()
@@ -89,7 +89,8 @@ if __name__ == "__main__":
         logger.error(f"Loss function {args.loss} is not supported.")
         raise ValueError(f"Loss function {args.loss} is not supported.")
             
-    logger.info(f"Training LightGCN on {args.dataset} with {loss.__class__.__name__} loss function and {optimizer.__class__.__name__} optimizer.")
+    logger.info(f"Training LightGCN for {args.epochs} on dataset {args.dataset}.")
+    logger.info(f"Training with {loss.__class__.__name__} loss and {optimizer.__class__.__name__} optimizer.")
 
     for epoch in range(train_config.epochs):
         train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
