@@ -95,7 +95,7 @@ if __name__ == "__main__":
         logger.error(f"Loss function {args.loss} is not supported.")
         raise ValueError(f"Loss function {args.loss} is not supported.")
             
-    logger.info(f"Training LightGCN for {args.epochs} on dataset {args.dataset}.")
+    logger.info(f"Training LightGCN for {args.epochs} epochs on dataset {args.dataset} dataset.")
     logger.info(f"Training with {loss.__class__.__name__} loss and {optimizer.__class__.__name__} optimizer.")
 
     for epoch in range(train_config.epochs):
