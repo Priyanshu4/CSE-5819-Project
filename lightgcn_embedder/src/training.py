@@ -43,19 +43,19 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
             # Add the nodes in this batch and the sampled nodes for this batch to visited set
             visited_user_nodes |= set(extended_nodes_batch)
 
-            user_embs, item_embs = model(extended_nodes_batch, item_nodes)
-            loss = model_loss.get_loss(nodes_batch, user_embs=user_embs, extended_user_nodes_batch=extended_nodes_batch, samples=samples)
-            loss_sum += loss.item()
+            with utils.timer(name="Forward"):
+                all_user_embs, all_item_embs = model() # Get all user and item embeddings
 
-            loss.backward()
-            optimizer.step()
+            with utils.timer(name="Loss"):
+                loss = model_loss.get_loss(nodes_batch, user_embs=all_user_embs, samples=samples)
+                loss_sum += loss.item()
 
-            optimizer.zero_grad()
-            model.zero_grad()
+            with utils.timer(name="Backward"):
+                loss.backward()
+                optimizer.step()
 
-            logger.debug(
-                f"EP[{epoch}], Batch [{i+1}/{n_batches}], Loss: {loss.item():.4f}, Dealed Nodes [{len(visited_user_nodes)}/{len(user_nodes)}]"
-            )
+                optimizer.zero_grad()
+                model.zero_grad()
 
             # Stop when all nodes are trained, this may be before all batches are used    
             if len(visited_user_nodes) == len(user_nodes):
@@ -63,8 +63,10 @@ def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss:
                 break
     
     time_info = utils.timer.formatted_tape_str(select_keys=["Sampling", "Training"])
+    training_time_info = utils.timer.formatted_tape_str(select_keys=["Forward", "Loss", "Backward"])
     utils.timer.zero()
-    logger.info(f"EPOCH {epoch} complete. Average Loss: {avg_loss:.4f}, Time: {time_info}")            
+    logger.info(f"EPOCH {epoch} complete. Average Loss: {avg_loss:.4f}, Time: {time_info}")  
+    logger.debug(f"Training time: {training_time_info}")          
 
     return avg_loss
 
