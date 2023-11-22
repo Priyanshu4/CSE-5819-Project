@@ -27,8 +27,10 @@ def configure_logger(name: str, log_dir: Path, filename: str = "", log_level: st
     logger.setLevel(log_levels.get(log_level, logging.INFO))
 
     # Create a file handler which logs messages
-
-    log_file = log_dir / (filename + "_" + current_timestamp() + ".log")
+    if filename:
+        log_file = log_dir / (filename + "_" + current_timestamp() + ".log")
+    else:
+        log_file = log_dir / (current_timestamp() + ".log")
     file_handler = logging.FileHandler(log_file)
     file_format = '%(asctime)s - [%(levelname)s] - [%(name)s] - %(message)s'
     file_handler.setFormatter(logging.Formatter(file_format))
@@ -52,13 +54,13 @@ def set_seed(seed: int):
     set_sampling_seed(seed)
 
 
-def sparse_matrix_to_tensor(X) -> torch.sparse.FloatTensor:
+def sparse_matrix_to_tensor(X) -> torch.sparse.sparse_coo_tensor:
     coo = X.tocoo().astype(np.float32)
     row = torch.Tensor(coo.row).long()
     col = torch.Tensor(coo.col).long()
     index = torch.stack([row, col])
     data = torch.FloatTensor(coo.data)
-    return torch.sparse.FloatTensor(index, data, torch.Size(coo.shape))
+    return torch.sparse.sparse_coo_tensor(index, data, torch.Size(coo.shape))
     
 
 class timer:

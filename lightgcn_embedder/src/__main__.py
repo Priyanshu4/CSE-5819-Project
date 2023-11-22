@@ -34,6 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=5819, help="random seed")
     parser.add_argument("--loss", type=str, default="simi", help="loss function, options: bpr, simi")
     parser.add_argument("--optimizer", type=str, default="adam", help="optimizer, options: adam, sgd")
+    parser.add_argument("--fast_simi", action="store_true", help="faster sampling for simi loss, use for very large & sparse datasets")
     parser.add_argument("--name", type=str, default="", help="The name to add to the embs file and log file names.")
     args = parser.parse_args()
 
@@ -83,7 +84,7 @@ if __name__ == "__main__":
         loss = BPRLoss(device, dataset, weight_decay=train_config.weight_decay)
         train_lightgcn = training.train_lightgcn_bpr_loss
     elif args.loss == "simi":
-        loss = SimilarityLoss(device, dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
+        loss = SimilarityLoss(device, dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=args.fast_simi)
         train_lightgcn = training.train_lightgcn_simi_loss
     else:
         logger.error(f"Loss function {args.loss} is not supported.")
@@ -96,6 +97,9 @@ if __name__ == "__main__":
         train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
 
     user_embs, item_embs = lightgcn()
-    embeddings_save_file = EMBEDDINGS_PATH / f'embs_{args.name}_{utils.current_timestamp()}.pkl'
+    if args.name:
+        embeddings_save_file = EMBEDDINGS_PATH / f'embs_{args.name}_{utils.current_timestamp()}.pkl'
+    else:
+        embeddings_save_file = EMBEDDINGS_PATH / f'embs_{utils.current_timestamp()}.pkl'
     pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
     logger.info(f"Saved user embeddings to {embeddings_save_file}")
