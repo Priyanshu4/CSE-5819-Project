@@ -54,13 +54,13 @@ def set_seed(seed: int):
     set_sampling_seed(seed)
 
 
-def sparse_matrix_to_tensor(X) -> torch.sparse.sparse_coo_tensor:
+def sparse_matrix_to_tensor(X) -> torch.sparse_coo_tensor:
     coo = X.tocoo().astype(np.float32)
     row = torch.Tensor(coo.row).long()
     col = torch.Tensor(coo.col).long()
     index = torch.stack([row, col])
     data = torch.FloatTensor(coo.data)
-    return torch.sparse.sparse_coo_tensor(index, data, torch.Size(coo.shape))
+    return torch.sparse_coo_tensor(index, data, torch.Size(coo.shape))
     
 
 class timer:

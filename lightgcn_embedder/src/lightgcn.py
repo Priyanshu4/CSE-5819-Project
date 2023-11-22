@@ -71,10 +71,10 @@ class LightGCN(nn.Module):
             # Get an adjacency matrix split into a list of folds and convert to tensors
             self.Graph = self.dataset.get_adj_mat_split(self.A_split)
             for i, fold in enumerate(self.Graph):
-                self.Graph[i] = utils.sparse_matrix_to_tensor(fold).to_sparse_csr().to(self.config.device)
+                self.Graph[i] = utils.sparse_matrix_to_tensor(fold).to(self.config.device)
             logger.info(f"Split adjacency matrix in {self.A_split} folds.")
         else:
-            self.Graph = utils.sparse_matrix_to_tensor(self.dataset.graph_adj_mat).to_sparse_csr().to(self.config.device)
+            self.Graph = utils.sparse_matrix_to_tensor(self.dataset.graph_adj_mat).to(self.config.device)
 
         logger.info(f"LightGCN is ready to go! (dropout:{self.config.train_config.dropout})")
 
