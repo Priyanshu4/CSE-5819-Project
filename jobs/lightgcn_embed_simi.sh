@@ -14,4 +14,4 @@ conda activate fake-review-detection-env
 
 cd ../lightgcn_embedder/src
 
-python __main__.py --dataset yelpnyc --loss simi --optimizer sgd --epochs 50 --dim 2 --name simi_sgd_50epochs_2d 
+python __main__.py --dataset yelpnyc --loss simi --optimizer adam --epochs 100 --dim 8 --name simi_adam_100epochs_8d 
