@@ -19,6 +19,12 @@ class ModelLoss:
 class SimilarityLoss(ModelLoss):
     """The similarity loss from DeepFD will be applied to LightGCN for embeddings.
        Similarities are only computed between each node and its samples to avoid computing all pairwise similarities.
+
+
+        When fast_sampling is True, we assume the dataset has high number of negative nodes (sparse).
+        Therefore, we assume that the a sample of all nodes is a sample of mostly negative nodes.
+        We also allow duplicate negative nodes. 
+        This means that some negative nodes will actually be positive nodes, so it may be good to increase n_neg.
     """
 
     def __init__(self, device: torch.device, dataset: BasicDataset, graph_simi: GraphSimilarity, n_pos: int, n_neg: int, fast_sampling: bool = False):

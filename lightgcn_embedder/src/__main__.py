@@ -84,7 +84,12 @@ if __name__ == "__main__":
         loss = BPRLoss(device, dataset, weight_decay=train_config.weight_decay)
         train_lightgcn = training.train_lightgcn_bpr_loss
     elif args.loss == "simi":
-        loss = SimilarityLoss(device, dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=args.fast_simi)
+        if args.fast_simi:
+            # Fast sampling means that some negative samples will be positive samples.
+            # Therefore, we increase the number of negative samples to compensate.
+            loss = SimilarityLoss(device, dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=11, fast_sampling=True)
+        else:
+            loss = SimilarityLoss(device, dataset, GraphSimilarity(dataset.graph_u2u), n_pos=10, n_neg=10, fast_sampling=False)
         train_lightgcn = training.train_lightgcn_simi_loss
     else:
         logger.error(f"Loss function {args.loss} is not supported.")

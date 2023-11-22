@@ -2,6 +2,7 @@ import logging
 import numpy as np
 from dataloader import BasicDataset
 from time import time
+import utils
 
 try:
     from cppimport import imp_from_filepath
@@ -29,6 +30,8 @@ def sample_train_set_pos_neg_users(dataset: BasicDataset, n_pos: int, n_neg: int
 
         When fast is True, we assume the dataset has high number of negative nodes (sparse).
         Therefore, we assume that the a sample of all nodes is a sample of mostly negative nodes.
+        We also allow duplicate negative nodes. 
+        This means that some negative nodes will actually be positive nodes, so it may be good to increase n_neg.
     """
     if fast:
         return _sample_train_set_pos_neg_users_fast(dataset, n_pos, n_neg)
@@ -41,6 +44,7 @@ def _sample_train_set_pos_neg_users_normal(dataset, n_pos, n_neg):
         
     for i in range(dataset.n_users):
         pos_pool = g_u2u[i].nonzero()[1]                # indices of all positive nodes for user i
+
         neg_pool = np.setdiff1d(all_indices, pos_pool)  # indices of all negative nodes for user i
 
         if len(pos_pool) >= n_pos:
@@ -63,17 +67,18 @@ def _sample_train_set_pos_neg_users_fast(dataset, n_pos, n_neg):
     all_indices = np.arange(dataset.n_users)
         
     for i in range(dataset.n_users):
-        pos_pool = g_u2u[i].nonzero()[1]                # indices of all positive nodes for user i
+        pos_pool = g_u2u[i].nonzero()[1]  # indices of all positive nodes for user i
 
         if len(pos_pool) >= n_pos:
             samples[i, :n_pos] = np.random.choice(pos_pool, n_pos, replace=False)
         else:
             samples[i, :len(pos_pool)] = pos_pool
             samples[i, len(pos_pool):n_pos] = np.random.choice(all_indices, n_pos - len(pos_pool), replace=False)
-            
+                
         # Here we make the simplifying assumption that the majority of nodes with be negatives.
         # Therefore, sampling from all nodes wil give us mostly negatives and is good enough.
-        samples[i, n_pos:] = np.random.choice(all_indices, n_neg, replace=False)
+        # We also sample with replacement for additional speed, even though this may give us some duplicates.
+        samples[i, n_pos:] = np.random.choice(all_indices, n_neg, replace=True)
 
     return samples
 
