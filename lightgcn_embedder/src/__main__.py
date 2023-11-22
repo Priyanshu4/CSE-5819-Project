@@ -1,5 +1,4 @@
 import torch
-import multiprocessing
 import argparse
 from pathlib import Path
 import pickle
@@ -45,7 +44,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if GPU else "cpu")
 
     if GPU: 
-        logger.info(f"CUDA GPA will be used for training.")
+        logger.info(f"{torch.cuda.get_device_name(torch.cuda.current_device())} will be used for training.")
     else:
         logger.info(f"No GPU available. CPU will be used for training.")
 
@@ -95,8 +94,9 @@ if __name__ == "__main__":
         logger.error(f"Loss function {args.loss} is not supported.")
         raise ValueError(f"Loss function {args.loss} is not supported.")
             
-    logger.info(f"Training LightGCN for {args.epochs} epochs on dataset {args.dataset} dataset.")
+    logger.info(f"Training LightGCN for {args.epochs} epochs on {args.dataset} dataset.")
     logger.info(f"Training with {loss.__class__.__name__} loss and {optimizer.__class__.__name__} optimizer.")
+    logger.info(f"LightGCN configured to produce {lightgcn_config.latent_dim} dimensional embeddings.")
 
     for epoch in range(train_config.epochs):
         train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
