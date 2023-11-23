@@ -10,7 +10,7 @@ module purge
 
 source /home/pra20003/miniconda3/etc/profile.d/conda.sh
 
-conda activate fake-review-detection-env
+conda activate fake-review-detection
 
 cd ../lightgcn_embedder/src
 

@@ -2,7 +2,6 @@
 
 #SBATCH --partition=general
 #SBATCH --ntasks=24
-#SBATCH --constraint='skylake'
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=priyanshu.agrawal+hpc@uconn.edu      # Destination email address
@@ -12,7 +11,7 @@ module purge
 
 source /home/pra20003/miniconda3/etc/profile.d/conda.sh
 
-conda activate deepfd-env
+conda activate fake-review-detection
 
 cd ../testing
 
