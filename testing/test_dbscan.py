@@ -169,11 +169,11 @@ if __name__ == "__main__":
 
     results = []
     if args.algorithm == "OPTICS":
-        epsilon_values = [1, 5]
+        epsilon_values = [0.01, 0.1, 1, 5, 10]
         min_samples_values = [5, 10, 20, 50]
         results = test_optics_dbscan_fraud_detection(embeddings, 0.05, epsilon_values, min_samples_values, true_labels, logger)
     elif args.algorithm == "DBSCAN":
-        epsilon_values = [0.0001, 0.001, 0.01, 0.1]
+        epsilon_values = [0.01, 0.1, 1, 5, 10]
         min_samples_values = [5, 10, 20, 50]
         results = test_dbscan_fraud_detection(embeddings, epsilon_values, min_samples_values, true_labels, logger)
     log_dbscan_results(results, logger)
