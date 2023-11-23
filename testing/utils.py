@@ -1,6 +1,7 @@
 import pickle
 import torch
 from pathlib import Path
+import numpy as np
 
 def load_user_embeddings(file: Path):
     """
@@ -14,9 +15,14 @@ def load_user_embeddings(file: Path):
     A numpy array of user embeddings.
     """
     with open(file, "rb") as file:
-        loaded_object = pickle.load(file)
+        try:
+            loaded_object = pickle.load(file)
+        except RuntimeError as e:
+            tensor = torch.load(file, map_location=torch.device('cpu'))
         if isinstance(loaded_object, torch.Tensor):
-            loaded_object = loaded_object.numpy()
+            loaded_object = loaded_object.detach().numpy()
+        if not isinstance(loaded_object, np.ndarray):
+            raise ValueError("The pickle file should contain a 2D numpy array or a torch tensor.")
     return loaded_object
 
 

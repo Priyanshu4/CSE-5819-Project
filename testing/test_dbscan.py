@@ -161,11 +161,11 @@ if __name__ == "__main__":
     embeddings_size_gb = embeddings_size / (1024 * 1024 * 1024)
 
     if embeddings_size_gb > 4:
-        logger.warning(f"Embeddings array size is {embeddings_size_gb} GiB.")
+        logger.warning(f"Embedding array size is {embeddings_size_gb} GiB.")
     else:
-        logger.debug(f"Embeddings array size is {embeddings_size} bytes.")
+        logger.debug(f"Embedding array size is {embeddings_size} bytes.")
 
-    logger.debug(f"Embeddings shape has {embeddings.shape[0]} users and {embeddings.shape[1]} features.")
+    logger.debug(f"Embedding has {embeddings.shape[0]} users and {embeddings.shape[1]} features.")
 
     results = []
     if args.algorithm == "OPTICS":
