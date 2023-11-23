@@ -107,5 +107,5 @@ if __name__ == "__main__":
     else:
         embeddings_save_file = EMBEDDINGS_PATH / f'embs_{utils.current_timestamp()}.pkl'
 
-    pickle.dump(user_embs.detach().numpy(), open(embeddings_save_file, 'wb'))
+    pickle.dump(user_embs.detach().cpu().numpy(), open(embeddings_save_file, 'wb'))
     logger.info(f"Saved user embeddings to {embeddings_save_file}")
