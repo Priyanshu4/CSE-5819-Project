@@ -12,6 +12,6 @@ source /home/nns20006/miniconda3/etc/profile.d/conda.sh
 
 conda activate lightgcn
 
-cd ../hclust/data/YelpNYC
+cd ../anomalyscore/
 
-python _makedata.py
+python generate_average.py
