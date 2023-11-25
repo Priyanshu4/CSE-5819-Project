@@ -60,3 +60,17 @@ class GraphSimilarity:
         user_x = self._user_bitarrays[x]
         user_y = self._user_bitarrays[y]
         return (user_x & user_y).count()
+    
+    def jaccard_similarity_pairs(self, indices):
+        """
+        Compute Jaccard similarity between each pair of user nodes given a list of indices.
+
+        :param indices: List of indices representing user nodes.
+        :return: Dictionary containing similarity scores for each pair of indices.
+        """
+        similarity_scores = {}
+        for i in range(len(indices)):
+            for j in range(i + 1, len(indices)):
+                idx_i, idx_j = indices[i], indices[j]
+                similarity_scores[(idx_i, idx_j)] = self.__getitem__((idx_i, idx_j))
+        return similarity_scores
