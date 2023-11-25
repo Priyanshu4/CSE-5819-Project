@@ -1,16 +1,23 @@
 from similarity import *
 import numpy as np
-import pandas as pd
 from functools import reduce
 
-
 class AnomalyScore:
-    def __init__(self, leaves, mapping, adj, metadata, avgratings):
-        self.leaves = leaves
-        self.mapping = mapping
+    def __init__(self, leaves, mapping, adj, average_ratings, rating_matrix, review_times, τ=0):
+        self.mapped_leaves = list()
+        self._map_leaves(leaves, mapping)
         self.adj = adj
-        self.metadata = metadata
-        self.avgrating = avgratings
+        self.average_ratings = average_ratings
+        self.review_times = review_times
+        self.rating_matrix = rating_matrix
+        self.review_times = review_times
+        self.τ = τ
+        
+
+    def _map_leaves(self, leaves, mapping):
+        """Remap the indices to the proper index which points to the adj matrix"""
+        for group in leaves:
+            self.mapped_leaves.append(mapping[group])
 
 
     def penalty_function(self, R_g, P_g):
@@ -109,7 +116,7 @@ class AnomalyScore:
 
         OUTPUTS:
         
-        PT_g (float) - product tightness for the group
+        NT_g (float) - product tightness for the group
         """
         R_gnorm = len(R_g)
         P_gnorm = len(P_g)
@@ -119,16 +126,42 @@ class AnomalyScore:
         return NT_g
 
 
-    def AVRD(self):
-        pass
+    def AVRD(self, R_g):
+        """
+        Generates average user rating deviation through the use of the dataset and matrix manipulation
+        """
+        R_gnorm = len(R_g)
+        average_ratings_matrix = np.tile(self.average_ratings, R_gnorm)
+        A_g = R_g * average_ratings_matrix
+        ones = np.ones(R_gnorm)
+        AVRD_g = (np.abs(A_g - self.rating_matrix) @ ones) / (R_g @ ones)
+        return AVRD_g
 
 
-    def BST(self):
-        pass
+    def BST(self, review_times_g):
+        """Generate burstness based off of times that the reviews were made"""
+
+        BST_g = np.where(review_times_g < self.τ, 1 - review_times_g / self.τ, 0)
+        return BST_g
+    
+        
+    def generate_single_anomaly_score(self, R_g, P_g, review_times_g):
+        """Generate single anomaly score"""
+
+        R_gnorm = len(R_g)
+        Π = self.review_tightness(R_g,P_g) * self.product_tightness(P_g) * self.neighbor_tightness(R_g, P_g)
+        AVRD_g = self.AVRD(R_g)
+        BST_g = self.BST(review_times_g)
+        anomaly_score = 3 * Π + np.sum(AVRD_g)/R_gnorm + np.sum(BST_g)/R_gnorm
+        return anomaly_score
     
 
-    def generate_single_anomaly_score(self, R_g):
-        """Generate single anomaly score"""
+    def generate_anomaly_scores(self):
+        """Generate all anomaly scores"""
+        anomaly_scores = list()
+        for R_g in self.mapped_leaves:
+            P_g = self.adj[R_g]
+            anomaly_scores.append(self.generate_single_anomaly_score(R_g, P_g, self.review_times[R_g]))
         
-        P_g = self.adj[R_g]
-        Π = 3 * self.review_tightness(R_g) * self.product_tightness() * self.neighbor_tightness()
+        return anomaly_scores
+
