@@ -1,0 +1,16 @@
+{
+    "data": {
+        "small": "data/small.pkl",
+        "blobs": "data/blobs.pkl",
+        "biclusters": "data/biclusters.pkl",
+        "largeblobs": "data/largeblobs.pkl",
+        "g1": "data/YelpNYC/samples/g1.pkl",
+        "g2": "data/YelpNYC/samples/g2.pkl",
+        "g3": "data/YelpNYC/samples/g3.pkl"
+    },
+    "mapping": {
+        "g1": "/data/YelpNYC/map/g1_map.pkl",
+        "g2": "/data/YelpNYC/map/g2_map.pkl",
+        "g3": "/data/YelpNYC/map/g3_map.pkl"
+    }
+}
