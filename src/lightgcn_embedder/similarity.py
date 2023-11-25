@@ -31,13 +31,13 @@ class GraphSimilarity:
         return bit_array
 
     def __getitem__(self, index):
-        """Get similarity between user node indices [x, y]"""
+        """Get smoothed jaccard similarity between user node indices [x, y]"""
         x, y = index
         user_x = self._user_bitarrays[x]
         user_y = self._user_bitarrays[y]
-        return self._get_simi(user_x, user_y)
+        return self._get_smoothed_jaccard_similarity(user_x, user_y)
 
-    def _get_simi(self, u1, u2):
+    def _get_smoothed_jaccard_similarity(self, u1, u2):
         """
         Gets similarity between user1 and user2, where their interaction vectors with products
         are represented by bitarrays.
@@ -55,8 +55,3 @@ class GraphSimilarity:
         else:
             simi_score = intersection_count / union_count
         return float(simi_score)
-
-    def num_items_in_common(self, x, y):
-        user_x = self._user_bitarrays[x]
-        user_y = self._user_bitarrays[y]
-        return (user_x & user_y).count()
