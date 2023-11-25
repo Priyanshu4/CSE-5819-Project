@@ -38,6 +38,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger = utils.configure_logger("Logger", LOGS_PATH, args.name, "info")
+    logger.info(f"Loading dataset {args.dataset}.")
     dataset = dataloader.load_dataset(args.dataset)
 
     GPU = torch.cuda.is_available()
