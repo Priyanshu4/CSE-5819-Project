@@ -1,11 +1,18 @@
 {
-    "yelpnyc": {
+    "comment": "filepaths are relative to this files directory",
+    "yelpnyc_pickle": {
         "dataset_type": "pickle",
         "pickle_protocol": 4,
         "filepaths": {
             "graph_u2i": "../../data/yelpnyc/yelpnyc_graph_u2p.pkl",
             "labels": "../../data/yelpnyc/yelpnyc_labels.pkl",
             "graph_u2u_simi": "../../data/yelpnyc/yelpnyc_graph_u2p_simi.pkl"
+        }
+    },
+    "yelpnyc": {
+        "dataset_type": "yelpnyc",
+        "filepaths": {
+            "metadata": "../../data/yelpnyc/yelpnyc/metadata.csv"
         }
     },
     "synthetic_easy_1000": {
