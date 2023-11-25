@@ -5,6 +5,7 @@ import scipy.sparse
 from scipy.sparse import csr_matrix
 import pandas as pd
 import numpy as np
+import torch
 
 class DataLoader:
 
@@ -55,6 +56,28 @@ class DataLoader:
 
         return dataset
     
+    def load_user_embeddings(self, file: Path):
+        """
+        Loads user embeddings from a pickle file. The pickle file should contain a 2D numpy array or a torch tensor
+        with shape (users, features), where each row represents the embedding of a user.
+
+        Args:
+        file: A pathlike representing the file path of the pickle file.
+
+        Returns:
+        A numpy array of user embeddings.
+        """
+        with open(file, "rb") as file:
+            try:
+                loaded_object = pickle.load(file)
+            except RuntimeError as e:
+                tensor = torch.load(file, map_location=torch.device('cpu'))
+            if isinstance(loaded_object, torch.Tensor):
+                loaded_object = loaded_object.detach().numpy()
+            if not isinstance(loaded_object, np.ndarray):
+                raise ValueError("The pickle file should contain a 2D numpy array or a torch tensor.")
+        return loaded_object
+
 class BasicDataset:
     @property
     def n_users(self):
