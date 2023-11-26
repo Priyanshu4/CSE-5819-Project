@@ -1,12 +1,13 @@
 import numpy as np
-from metrics import evaluate_predictions
 import logging
 import argparse
 from pathlib import Path
 import os
 import sys
 from sklearn.cluster import OPTICS, DBSCAN, cluster_optics_dbscan
-import utils
+
+from .metrics import evaluate_predictions
+import src.utils as utils
 
 
 def dbscan_fraud_detection(data: np.ndarray, epsilon: float, min_samples: int) -> np.ndarray:
