@@ -49,7 +49,7 @@ class AnomalyScore:
         for p in P_g_bit:
             intersection = intersection & p
 
-    def group_set_reviews(self, P_g_bit):
+    def group_review_count(self, P_g_bit):
         """Generate the total number of reviews of all user in the group
         """
         sum = 0
@@ -71,7 +71,7 @@ class AnomalyScore:
         """
         R_gnorm = len(R_g)
         P_gnorm = self.group_set_union(P_g_bit).count()
-        L_g = 1 / (1 + np.e**(-1 * (R_gnorm + P_gnorm - 3)))
+        L_g = 1 / (1 + np.exp(-1 * (R_gnorm + P_gnorm - 3)))
         return L_g
 
     def review_tightness(self, R_g, P_g_bit):
@@ -88,7 +88,7 @@ class AnomalyScore:
         R_gnorm = len(R_gnorm)
         P_gnorm = self.group_set_union(P_g_bit).count()
         L_g = self.penalty_function(R_g, P_g_bit)
-        RT_g = (self.group_set_reviews(P_g_bit) * L_g) / (R_gnorm * P_gnorm)
+        RT_g = (self.group_review_count(P_g_bit) * L_g) / (R_gnorm * P_gnorm)
         return RT_g
 
 

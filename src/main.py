@@ -2,9 +2,6 @@ import torch
 import argparse
 from pathlib import Path
 import pickle
-import os
-import multiprocessing
-import numpy as np
 import json
 
 # Absolute imports only work if ran from the root directory
@@ -21,12 +18,11 @@ from src.embedding.loss import SimilarityLoss, BPRLoss
 from src.embedding import training
 from src.visualization.embvis import save_embeddings_plot
 
-from src.clustering.hclust import HClust
-from src.clustering.anomaly import AnomalyScore
-import src.clustering.split as split
+from src.testing.hclust_anomaly import test_hclust_anomaly_main
+from src.testing.dbscan import test_optics_dbscan_fraud_detection, log_dbscan_results
 
 def embedding_main(args, dataset, logger):
-    """ Main code for the embedding generation.
+    """ Main code for the lightgcn training and embedding generation.
     """
     GPU = torch.cuda.is_available()
     device = torch.device("cuda" if GPU else "cpu")
@@ -93,50 +89,39 @@ def embedding_main(args, dataset, logger):
 def clustering_main(args, dataset, user_embs, logger):
     """ Main code for the clustering.
     """
+    if args.clustering == "none":
+        logger.info("Skipping clustering and fraud detection.")
+        return
+
     n_users, n_features = user_embs.shape
     logger.info(f"Clustering {n_users} users with {n_features} features.")
 
-    if n_users > 60000:
-        logger.warning(f"Splitting {n_users} into groups with max size 60000.")
-        groups, group_indices = split.split_matrix_random(user_embs, approx_group_sizes=60000)
-    else:
-        groups, group_indices = split.split_matrix_random(user_embs, num_groups=1)
+    if args.clustering == "hclust":
+        logger.info("Clustering with hierarchical clustering and anomaly scores for fraud detection.")
+        test_hclust_anomaly_main(dataset, user_embs, args.tau, logger)
 
-    all_clusters = []
-    num_cores = os.cpu_count()
-    for i, group in enumerate(groups):
-        hclust = HClust(group)
-        with utils.timer(name="linkages"):
-            linkage = hclust.generate_linkage_matrix()
-
-        with utils.timer(name="leaves"):
-            with multiprocessing.Pool(num_cores) as p:
-                # Find the leaves under every branch of the hierarchical clustering
-                leaves = p.map(hclust._find_leaves_iterative, [row for row in linkage])
-                group_user_indices = np.array(group_indices[i])
-                mapped_leaves = [group_user_indices[group] for group in leaves]
-                all_clusters.extend(mapped_leaves)
-   
-    hclust_time_info = utils.timer.formatted_tape_str(select_keys=["linkages", "leaves"])
-    utils.timer.zero(select_keys=["linkages", "leaves"])
-    logger.info(f"Hierarchical Clustering Time: {hclust_time_info}")
-
-    # Generate anomaly scores
-    with utils.timer(name="anomaly_scores"):
-        use_metadata = (type(dataset) == YelpNycDataset)
-        anomaly_scorer = AnomalyScore(all_clusters, dataset, use_metadata=use_metadata, burstness_threshold=args.tau)
-        anomaly_scores = anomaly_scorer.generate_anomaly_scores()
-    anomaly_score_time_info = utils.timer.formatted_tape_str(select_keys=["anomaly_scores"])
-    utils.timer.zero(select_keys=["anomaly_scores"])
-    logger.info(f"Anomaly Score Time: {anomaly_score_time_info}")
-
-    # TODO: Make a testing script to test different anomaly score thresholds and compute metrics
+    if args.clustering == "dbscan":
+        logger.info("Clustering with DBSCAN for density based fraud detection.")
+        epsilon_values = [0.01, 0.1, 1, 5, 10]
+        min_samples_values = [5, 10, 20, 50]
+        results = test_optics_dbscan_fraud_detection(user_embs, 0.05, epsilon_values, min_samples_values, dataset.user_labels, logger)
+        log_dbscan_results(results, logger)
+    
 
 if __name__ == "__main__":
 
     dataloader = DataLoader(DATASETS_CONFIG_PATH)
     
-    parser = argparse.ArgumentParser(description="Go lightGCN")
+    parser = argparse.ArgumentParser(description="Fake Review Group Detection with LightGCN embeddings and clustering.")
+
+    # General arguments
+    parser.add_argument("--name", type=str, default="", help="The experiment name for the results folder.")
+    parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataloader.dataset_names}")
+    parser.add_argument("--seed", type=int, default=5819, help="random seed")
+
+    # Arguments for embedding and LightGCN
+    parser.add_argument("--embeddings", type=str, default="", help="The path to the embeddings file. If given, training is skipped and clustering is done directly.")
+    parser.add_argument("--epochs", type=int, default=100, help="the epochs for training")
     parser.add_argument("--batch_size", type=int, default=2048, help="the batch size for training procedure")
     parser.add_argument("--dim", type=int, default=16, help="the embedding size of lightGCN")
     parser.add_argument("--layer", type=int, default=3, help="the layer num of lightGCN")
@@ -147,18 +132,16 @@ if __name__ == "__main__":
     parser.set_defaults(dropout=False)
     parser.add_argument("--keepprob", type=float, default=0.6, help="the dropout keep prob")
     parser.add_argument("--a_fold", type=int, default=100, help="the fold num used to split large adj matrix")
-    parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataloader.dataset_names}")
-    parser.add_argument("--epochs", type=int, default=100, help="the epochs for training")
-    parser.add_argument("--seed", type=int, default=5819, help="random seed")
     parser.add_argument("--loss", type=str, default="simi", help="loss function, options: bpr, simi")
     parser.add_argument("--optimizer", type=str, default="adam", help="optimizer, options: adam, sgd")
     parser.add_argument("--fast_simi", action="store_true", help="faster sampling for simi loss, use for very large & sparse datasets")
     parser.add_argument("--no_fast_simi", action="store_false", dest="fast_simi", help="disable fast sampling for simi loss")
     parser.set_defaults(fast_simi=True)
-    parser.add_argument("--name", type=str, default="", help="The experiment name for the results folder.")
-    parser.add_argument("--tau", type=float, default=0, help="The threshold for burstness.")
-    parser.add_argument("--embeddings", type=str, default="", 
-            help="The path to the embeddings file. If given, training is skipped and clustering is done directly.")
+
+    # Arguments for clustering
+    parser.add_argument("--clustering", type=str, default="hclust", help="The clustering algorithm to use. Options: hclust, dbscan, none")
+    parser.add_argument("--tau", type=float, default=0, help="The threshold for burstness in anomaly score computation.")
+ 
     args = parser.parse_args()
 
     experiment_name = args.name + utils.current_timestamp()
