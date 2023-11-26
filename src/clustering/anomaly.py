@@ -8,20 +8,15 @@ class AnomalyScore:
         https://arxiv.org/pdf/2112.06403.pdf
     """
 
-    def __init__(self, leaves, mapping, dataset: BasicDataset, use_metadata = True, burstness_threshold=0):
+    def __init__(self, clusters, dataset: BasicDataset, use_metadata = True, burstness_threshold=0):
         """ 
         INPUTS:
-        leaves (arr) - list of leaves from the clustering
-        mapping (arr) - list of the mapping from the leaves to the original nodes
+        clusters (arr) - list of clusters, where each cluster is a list of users
         dataset (BasicDataset) - dataset object
         use_metadata (bool) - whether to use metadata (review times and average ratings) or not
         burstness_threshold (int) - threshold for burstness
         """
-        # map the leaves to the proper values
-        mapping = np.array(mapping)
-        self.mapped_leaves = [mapping[group] for group in leaves]
-        
-        # set the values required to calculate the anomaly scores
+        self.clusters = clusters
         self.use_metadata = use_metadata
         self.adj = dataset.graph_u2i.toarray()
 
@@ -172,7 +167,7 @@ class AnomalyScore:
     def generate_anomaly_scores(self):
         """Generate all anomaly scores"""
         anomaly_scores = list()
-        for R_g in self.mapped_leaves:
+        for R_g in self.clusters:
             P_g = self.adj[R_g]
             anomaly_scores.append(self.generate_single_anomaly_score(R_g, P_g, self.review_times[R_g]))
         
