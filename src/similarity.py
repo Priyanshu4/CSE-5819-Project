@@ -1,13 +1,15 @@
 from bitarray import bitarray
+from scipy.sparse import csr_matrix
 
-class GraphSimilarity:
-    """Class for computing similarity between 2 user nodes.
+class UserSimilarity:
+    """
+    Class for computing similarities between 2 user nodes.
     Replaces large np array of pairwise similarities that may not be able to fit in memory.
     Takes user to item sparse matrix as input. Internally represents users as bitarrays.
     Similarities are computed lazily and efficiently when queried.
     """
 
-    def __init__(self, graph_u2i):
+    def __init__(self, graph_u2i: csr_matrix):
         self._graph_u2i = graph_u2i
         self._n_users = graph_u2i.shape[0]
         self.shape = (self._n_users, self._n_users)
@@ -29,20 +31,32 @@ class GraphSimilarity:
         for i in non_zero_column_indices:
             bit_array[i] = 1
         return bit_array
-
-    def __getitem__(self, index):
-        """Get smoothed jaccard similarity between user node indices [x, y]"""
-        x, y = index
-        user_x = self._user_bitarrays[x]
-        user_y = self._user_bitarrays[y]
-        return self._get_smoothed_jaccard_similarity(user_x, user_y)
-
-    def _get_smoothed_jaccard_similarity(self, u1, u2):
+    
+    def get_user_bitarray(self, user_index):
+        return self._user_bitarrays[user_index]
+    
+    def get_jaccard_similarity(self, u1: int, u2: int):
         """
-        Gets similarity between user1 and user2, where their interaction vectors with products
-        are represented by bitarrays.
-        0 indicates no interaction, 1 indicates iteraction.
+        Gets the jaccard similarity between user1 and user2 using their indices.
         """
+        u1 = self.get_user_bitarray(u1)
+        u2 = self.get_user_bitarray(u2)
+        intersection = u1 & u2
+        union = u1 | u2
+        union_count = union.count()
+        intersection_count = intersection.count()
+
+        if union_count == 0:
+            return 0
+        
+        return intersection_count / union_count
+
+    def get_smoothed_jaccard_similarity(self, u1: int , u2: int):
+        """
+        Gets the smoothed jaccard similarity between user1 and user2.
+        """
+        u1 = self.get_user_bitarray(u1)
+        u2 = self.get_user_bitarray(u2)
         intersection = u1 & u2
         union = u1 | u2
         union_count = union.count()
@@ -55,3 +69,4 @@ class GraphSimilarity:
         else:
             simi_score = intersection_count / union_count
         return float(simi_score)
+    

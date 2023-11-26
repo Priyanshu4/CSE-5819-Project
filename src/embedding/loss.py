@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from src.dataloader import BasicDataset
-from .similarity import GraphSimilarity
+from src.similarity import UserSimilarity
 from . import sampling
 
 class ModelLoss:
@@ -27,9 +27,9 @@ class SimilarityLoss(ModelLoss):
         This means that some negative nodes will actually be positive nodes, so it may be good to increase n_neg.
     """
 
-    def __init__(self, device: torch.device, dataset: BasicDataset, graph_simi: GraphSimilarity, n_pos: int, n_neg: int, fast_sampling: bool = False):
+    def __init__(self, device: torch.device, dataset: BasicDataset, n_pos: int, n_neg: int, fast_sampling: bool = False):
         super().__init__(device, dataset)
-        self.graph_simi = graph_simi
+        self.user_simi = UserSimilarity(dataset.graph_u2i)
         self.n_pos = n_pos
         self.n_neg = n_neg
         self.fast_sampling = fast_sampling
@@ -58,7 +58,7 @@ class SimilarityLoss(ModelLoss):
         for node_i in user_nodes:
             for sample_index in range(samples.shape[1]):
                 node_j = samples[node_i, sample_index]
-                simi_feat_list.append(self.graph_simi[node_i, node_j])
+                simi_feat_list.append(self.user_simi.get_smoothed_jaccard_similarity(node_i, node_j))
         simi_feat = torch.FloatTensor(simi_feat_list).view(len(user_nodes), -1).to(self.device)
 
         # Compute loss
