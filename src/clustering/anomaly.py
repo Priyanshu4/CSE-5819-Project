@@ -56,7 +56,7 @@ class AnomalyScore:
         L_g (float) - penalty for the group
         """
         R_gnorm = len(R_g)
-        P_gnorm = self.group_set_union(P_g).sum()
+        P_gnorm = len(P_g) #self.group_set_union(P_g).sum()
         L_g = 1 / (1 + np.e**(-1 * (R_gnorm + P_gnorm - 3)))
         return L_g
 
@@ -71,8 +71,8 @@ class AnomalyScore:
         OUTPUTS:
         RT_g (float) - review tightness for the group
         """
-        R_gnorm = R_g.sum()
-        P_gnorm = self.group_set_union(P_g).sum()
+        R_gnorm = len(R_g) #R_g.sum()
+        P_gnorm = len(P_g) #self.group_set_union(P_g).sum()
         L_g = self.penalty_function(R_g, P_g)
         RT_g = (np.sum(P_g) * L_g) / (R_gnorm * P_gnorm)
         return RT_g
@@ -180,7 +180,7 @@ class AnomalyScore:
             BST_g = self.BST(review_periods_g)
             anomaly_score = 3 * group_anomaly_compactness + np.sum(AVRD_g)/R_gnorm + np.sum(BST_g)/R_gnorm
         else:
-            anomaly_score = 3 * group_anomaly_compactness
+            anomaly_score = 3 * group_anomaly_compactness + np.sum(AVRD_g)/R_gnorm
 
         return anomaly_score
     
