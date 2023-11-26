@@ -1,9 +1,5 @@
 import torch
 import numpy as np
-import logging
-import logging.config
-import sys
-from pathlib import Path
 from datetime import datetime
 
 from src.embedding.sampling import set_sampling_seed
@@ -12,39 +8,6 @@ def current_timestamp():
     now = datetime.now()
     timestamp = now.strftime("%Y_%m_%d_%H_%M")
     return timestamp
-
-def configure_logger(name: str, log_dir: Path, filename: str = "", log_level: str = "info") -> logging.Logger:
-    log_levels = {
-        'debug': logging.DEBUG,
-        'info': logging.INFO,
-        'warning': logging.WARNING,
-        'error': logging.ERROR,
-        'critical': logging.CRITICAL
-    }
-
-    # Create a logger
-    logger = logging.getLogger(name)
-    logger.setLevel(log_levels.get(log_level, logging.INFO))
-
-    # Create a file handler which logs messages
-    if filename:
-        log_file = log_dir / (filename + "_" + current_timestamp() + ".log")
-    else:
-        log_file = log_dir / (current_timestamp() + ".log")
-    file_handler = logging.FileHandler(log_file)
-    file_format = '%(asctime)s - [%(levelname)s] - [%(name)s] - %(message)s'
-    file_handler.setFormatter(logging.Formatter(file_format))
-
-    # Create a console handler which logs messages to stdout
-    std_out_format = '%(asctime)s - [%(levelname)s] - %(message)s'
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(logging.Formatter(std_out_format))
-
-    # Add the handlers to the logger
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
-    return logger
 
 def set_seed(seed: int):
     if torch.cuda.is_available():

@@ -7,7 +7,7 @@ import multiprocessing
 import numpy as np
 
 from src.dataloader import DataLoader, YelpNycDataset
-from src.config import DATASETS_CONFIG_PATH, get_results_path
+from src.config import DATASETS_CONFIG_PATH, get_results_path, get_logger
 import src.utils as utils
 
 from src.embedding.lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     experiment_name = args.name + utils.current_timestamp()
     results_path = get_results_path(experiment_name)
 
-    logger = utils.configure_logger("Logger", results_path, args.name, "info")
+    logger = get_logger("Logger", results_path, args.name)
     logger.info(f"Loading dataset {args.dataset}.")
     dataset = dataloader.load_dataset(args.dataset)
 
