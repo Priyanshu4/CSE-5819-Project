@@ -38,4 +38,4 @@ def split_matrix_random(matrix, approx_group_sizes = 0, num_groups = 0):
         group = matrix[group_indices[i]]
         groups.append(group)
 
-    return groups
+    return groups, group_indices

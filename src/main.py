@@ -102,10 +102,6 @@ def clustering_main(args, dataset, user_embs, logger):
     else:
         groups, group_indices = split.split_matrix_random(user_embs, num_groups=1)
 
-    def find_leaves_wrapper(args):
-        clusterer,row = args
-        return clusterer._find_leaves_iterative(row)
-
     all_clusters = []
     num_cores = os.cpu_count()
     for i, group in enumerate(groups):
@@ -116,17 +112,23 @@ def clustering_main(args, dataset, user_embs, logger):
         with utils.timer(name="leaves"):
             with multiprocessing.Pool(num_cores) as p:
                 # Find the leaves under every branch of the hierarchical clustering
-                leaves = p.map(find_leaves_wrapper, [(hclust, row) for row in linkage])
+                leaves = p.map(hclust._find_leaves_iterative, [row for row in linkage])
                 group_user_indices = np.array(group_indices[i])
                 mapped_leaves = [group_user_indices[group] for group in leaves]
                 all_clusters.extend(mapped_leaves)
    
-    logger.info("Hclust Times:", utils.timer.formatted_tape_str(["linkages", "leaves"]))
+    hclust_time_info = utils.timer.formatted_tape_str(select_keys=["linkages", "leaves"])
+    utils.timer.zero(select_keys=["linkages", "leaves"])
+    logger.info(f"Hierarchical Clustering Time: {hclust_time_info}")
 
     # Generate anomaly scores
-    use_metadata = (type(dataset) == YelpNycDataset)
-    anomaly_scorer = AnomalyScore(all_clusters, dataset, use_metadata=use_metadata, burstness_threshold=args.tau)
-    anomaly_scores = anomaly_scorer.generate_anomaly_scores()
+    with utils.timer(name="anomaly_scores"):
+        use_metadata = (type(dataset) == YelpNycDataset)
+        anomaly_scorer = AnomalyScore(all_clusters, dataset, use_metadata=use_metadata, burstness_threshold=args.tau)
+        anomaly_scores = anomaly_scorer.generate_anomaly_scores()
+    anomaly_score_time_info = utils.timer.formatted_tape_str(select_keys=["anomaly_scores"])
+    utils.timer.zero(select_keys=["anomaly_scores"])
+    logger.info(f"Anomaly Score Time: {anomaly_score_time_info}")
 
     # TODO: Make a testing script to test different anomaly score thresholds and compute metrics
 
@@ -184,10 +186,11 @@ if __name__ == "__main__":
         user_embs = embedding_main(args, dataset, logger)
         embeddings_save_file = results_path / "embeddings.pkl"
         pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
-        logger.info(f"Saved user embeddings to {results_path}")
+        logger.info(f"Saved user embeddings to {embeddings_save_file}")
 
-    save_embeddings_plot(user_embs, dataset.user_labels, results_path / "embeddings.png")
-    logger.info(f"Saved embeddings plot to {results_path}")
+    embeddings_plot_save_file = results_path / "embeddings.png"
+    save_embeddings_plot(user_embs, dataset.user_labels, embeddings_plot_save_file)
+    logger.info(f"Saved embeddings plot to {embeddings_plot_save_file}")
 
     clustering_main(args, dataset, user_embs, logger)
 

@@ -88,7 +88,9 @@ class AnomalyScore:
         OUTPUTS:
         PT_g (float) - product tightness for the group
         """
-        PT_g = self.group_set_union(P_g).sum() / self.group_set_intersection(P_g).sum()
+        union_count = self.group_set_union(P_g).sum()
+        intersection_count = self.group_set_intersection(P_g).sum()
+        PT_g = 0 if union_count == 0 else intersection_count / union_count
         return PT_g
     
     

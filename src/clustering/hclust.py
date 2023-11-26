@@ -11,7 +11,8 @@ class HClust:
         Generates linkage matrix from given data
 
         Inputs:
-        method (str) - takes 3 different methods to generate the linkage matrix
+        method (str) - linkage method to generate the linkage matrix
+                       see scipy.cluster.hierarchy.linkage for more info
 
         Outputs:
         Z (ndarr) - linkage matrix generated from initialized data

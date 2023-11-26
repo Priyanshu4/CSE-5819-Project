@@ -1,3 +1,6 @@
+""" Functions for validating/testing fraud detection on embeddings with DBSCAN and OPTICS.
+"""
+
 import numpy as np
 import logging
 import argparse
