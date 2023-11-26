@@ -200,8 +200,8 @@ class GraphUser2ItemDataset(BasicDataset):
         """
         return self._labels
         
-class PickleDataset(BasicDataset):
-    """ For loading dataset from pickled u2i csr matrix and labels array.
+class PickleDataset(GraphUser2ItemDataset):
+    """ For loading dataset from a pickled u2i csr matrix and labels array.
     """
     def __init__(self, u2i_pkl_path: Path, user_labels_pkl_path: Path):
         graph_u2i = pickle.load(open(u2i_pkl_path, "rb"))
