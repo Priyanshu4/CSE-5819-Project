@@ -5,8 +5,8 @@ import logging.config
 import sys
 from pathlib import Path
 from datetime import datetime
-from sampling import set_sampling_seed
 
+from src.embedding.sampling import set_sampling_seed
 
 def current_timestamp():
     now = datetime.now()
@@ -126,8 +126,6 @@ class timer:
                 hint = hint + f"{key}:{value:.2f}|"
         return hint
 
-
-    
     @staticmethod
     def zero(select_keys=None):
         if select_keys is None:
