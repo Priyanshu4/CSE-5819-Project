@@ -1,8 +1,0 @@
-2023-11-05 19:38:16,661 - INFO - Running with data: g3
-2023-11-05 19:38:16,662 - INFO - generating linkage matrix
-2023-11-05 19:38:56,812 - INFO - 40.149975538253784 seconds to create linkage matrix
-2023-11-05 19:38:56,815 - INFO - File 'results/2023-11-05_19-38-16/linkage' has been successfully written.
-2023-11-05 19:38:56,815 - INFO - generating dendrogram
-2023-11-05 19:45:01,774 - INFO - 364.95918130874634 seconds to create dendrogram
-2023-11-05 19:45:03,664 - INFO - 1.415421724319458 seconds to find all leaves
-2023-11-05 19:45:03,753 - INFO - File 'results/2023-11-05_19-38-16/leaves' has been successfully written.
