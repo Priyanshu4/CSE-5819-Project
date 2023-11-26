@@ -3,15 +3,16 @@ import argparse
 from pathlib import Path
 import pickle
 
-from dataloader import DataLoader
-from similarity import GraphSimilarity
-from lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
-from loss import SimilarityLoss, BPRLoss
-import utils
-import training
+from src.dataloader import DataLoader
+import src.config as config
+import src.utils as utils
+from .similarity import GraphSimilarity
+from .lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
+from .loss import SimilarityLoss, BPRLoss
+from . import training
 
-CONFIGS_PATH = Path(__file__).parent.parent / "configs"
-DATASET_CONFIG = CONFIGS_PATH / "datasets.json"
+CONFIGS_PATH = config.CONFIGS_DIRECTORY_PATH
+DATASET_CONFIG = config.DATASETS_CONFIG_PATH
 LOGS_PATH = Path(__file__).parent.parent / "results" / "logs"
 EMBEDDINGS_PATH = Path(__file__).parent.parent / "results" / "embeddings"
 

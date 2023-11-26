@@ -1,8 +1,7 @@
 import logging
 import numpy as np
-from dataloader import BasicDataset
-from time import time
-import utils
+
+from src.dataloader import BasicDataset
 
 try:
     from cppimport import imp_from_filepath
@@ -84,7 +83,6 @@ def _sample_train_set_pos_neg_users_fast(dataset, n_pos, n_neg):
 
 def BPR_UniformSample_original(dataset, neg_ratio = 1):
     dataset : BasicDataset
-    start = time()
     if _sample_ext:
         S = _sampling.sample_negative(dataset.n_users, dataset.m_items,
                                      dataset.trainDataSize, _get_positive_items(dataset), neg_ratio)
@@ -106,7 +104,6 @@ def _BPR_UniformSample_original_python(dataset):
     :return:
         np.array
     """
-    total_start = time()
     dataset : BasicDataset
     #user_num = dataset.trainDataSize
     user_num = dataset.n_users
@@ -116,14 +113,10 @@ def _BPR_UniformSample_original_python(dataset):
     allPos = _get_positive_items(dataset)
 
     S = []
-    sample_time1 = 0.
-    sample_time2 = 0.
     for i, user in enumerate(users):
-        start = time()
         posForUser = allPos[user]
         if len(posForUser) == 0:
             continue
-        sample_time2 += time() - start
         posindex = np.random.randint(0, len(posForUser))
         positem = posForUser[posindex]
         while True:
@@ -133,7 +126,4 @@ def _BPR_UniformSample_original_python(dataset):
             else:
                 break
         S.append([user, positem, negitem])
-        end = time()
-        sample_time1 += end - start
-    total = time() - total_start
     return np.array(S)

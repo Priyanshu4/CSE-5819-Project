@@ -1,11 +1,12 @@
 import torch
 from torch import nn
 from dataclasses import dataclass
-from dataloader import BasicDataset
 import numpy as np
 from typing import Optional
-import utils
 import logging
+
+from src.dataloader import BasicDataset
+import src.utils as utils
 
 @dataclass
 class LightGCNTrainingConfig:

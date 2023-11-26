@@ -1,11 +1,12 @@
 import torch
 import numpy as np
 import math
-from loss import ModelLoss, SimilarityLoss, BPRLoss
-from dataloader import BasicDataset
-from lightgcn import LightGCN
-import utils
-import sampling
+
+from src.dataloader import BasicDataset
+import src.utils as utils
+from .loss import SimilarityLoss, BPRLoss
+from .lightgcn import LightGCN
+from . import sampling 
 
 def train_lightgcn_simi_loss(dataset: BasicDataset, model: LightGCN, model_loss: SimilarityLoss, optimizer: torch.optim.Optimizer, epoch: int, logger):
 

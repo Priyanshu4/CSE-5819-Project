@@ -1,9 +1,9 @@
-from lightgcn import LightGCN, LightGCNConfig
 import numpy as np
-from dataloader import BasicDataset
 import torch
-import sampling
-from similarity import GraphSimilarity
+
+from src.dataloader import BasicDataset
+from .similarity import GraphSimilarity
+from . import sampling
 
 class ModelLoss:
 
