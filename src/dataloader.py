@@ -15,11 +15,11 @@ class DataLoader:
             raise FileNotFoundError(f"Create a Datasets Path Config file at {datasets_config_file}!")
 
         self.datasets_config_file = datasets_config_file
-        self.datasets_config = json.load(open(datasets_config_file))
+        self.datasets_config = json.load(open(datasets_config_file))["datasets"]
 
     @property
     def dataset_names(self):
-        return self.datasets_config.keys()
+        return list(self.datasets_config.keys())
     
     def parse_path(self, path: str):
         """ Parse a path string from the datasets config file into a Path object
@@ -32,7 +32,7 @@ class DataLoader:
 
     def load_dataset(self, dataset_name: str):
         if dataset_name not in self.dataset_names:
-            raise ValueError(f"{dataset_name} is not a valid dataset.")
+            raise ValueError(f"{dataset_name} is not a valid dataset. Valid datasets are: {self.dataset_names}")
         
         dataset_config = self.datasets_config[dataset_name]
 
