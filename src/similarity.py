@@ -35,6 +35,9 @@ class UserSimilarity:
     def get_user_bitarray(self, user_index):
         return self._user_bitarrays[user_index]
     
+    def get_user_bitarrays(self, user_indices):
+        return [self._user_bitarrays[i] for i in user_indices]
+    
     def get_jaccard_similarity(self, u1: int, u2: int):
         """
         Gets the jaccard similarity between user1 and user2 using their indices.
