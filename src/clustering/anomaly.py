@@ -1,36 +1,56 @@
 import numpy as np
 from functools import reduce
 
+from src.dataloader import BasicDataset
+
 class AnomalyScore:
-    def __init__(self, leaves, mapping, adj, average_ratings, rating_matrix, review_times, τ=0):
+    """ Anomaly scores for fake reviewer group detection implemented according to the following paper:
+        https://arxiv.org/pdf/2112.06403.pdf
+    """
+
+    def __init__(self, leaves, mapping, dataset: BasicDataset, use_metadata = True, burstness_threshold=0):
+        """ 
+        INPUTS:
+        leaves (arr) - list of leaves from the clustering
+        mapping (arr) - list of the mapping from the leaves to the original nodes
+        dataset (BasicDataset) - dataset object
+        use_metadata (bool) - whether to use metadata (review times and average ratings) or not
+        burstness_threshold (int) - threshold for burstness
+        """
         # map the leaves to the proper values
         mapping = np.array(mapping)
         self.mapped_leaves = [mapping[group] for group in leaves]
+        
         # set the values required to calculate the anomaly scores
-        self.adj = adj
-        self.average_ratings = average_ratings
-        self.review_times = review_times
-        self.rating_matrix = rating_matrix
-        self.review_times = review_times
-        self.τ = τ
+        self.use_metadata = use_metadata
+        self.adj = dataset.graph_u2i.toarray()
 
+        if self.use_metadata:
+            avg_ratings = dataset.metadata_df.groupby(dataset.METADATA_ITEM_ID)[dataset.METADATA_STAR_RATING].mean()
+            self.average_ratings = avg_ratings.values
+            self.rating_matrix = dataset.rated_graph_u2i.toarray()
+            first_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].min()
+            last_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].max()
+            self.review_times = (last_date-first_date).astype('timedelta64[D]')
+
+        self.burstness_threshold = burstness_threshold
 
     def penalty_function(self, R_g, P_g):
         """
-        Generates penalty function for the anomaly scores given a list of reviewers and products that they reviewed
+        Generates penalty function for the anomaly scores given a list of reviewers and products that they reviewed.
+        Penalizes smaller groups because they are less likely to be a fake review farm.
 
         INPUTS:
         R_g (arr) - users in the group
         P_g (arr) - product sets in the group
 
         OUTPUTS:
-        L_g (float) - review tightness for the group
+        L_g (float) - penalty for the group
         """
         R_gnorm = len(R_g)
         P_gnorm = len(P_g)
         L_g = 1 / (1 + np.e**(-1 * (R_gnorm + P_gnorm - 3)))
         return L_g
-
 
     def review_tightness(self, R_g, P_g):
         """
@@ -66,7 +86,7 @@ class AnomalyScore:
     
     def jaccard_similarity(self, s1, s2):
         """
-        Compute Jaccard similarity between two NumPy arrays.
+        Compute Jaccard similarity between two sets, represented as NumPy arrays.
 
         INPUTS:
         s1 (ndarr) - first array.
@@ -135,17 +155,17 @@ class AnomalyScore:
 
     def BST(self, review_times_g):
         """Generate burstness based off of times that the reviews were made"""
-        BST_g = np.where(review_times_g < self.τ, 1 - review_times_g / self.τ, 0)
+        BST_g = np.where(review_times_g < self.burstness_threshold, 1 - review_times_g / self.burstness_threshold, 0)
         return BST_g
     
         
     def generate_single_anomaly_score(self, R_g, P_g, review_times_g):
         """Generate single anomaly score"""
         R_gnorm = len(R_g)
-        Π = self.review_tightness(R_g,P_g) * self.product_tightness(P_g) * self.neighbor_tightness(R_g, P_g)
+        group_anomaly_compactness = self.review_tightness(R_g,P_g) * self.product_tightness(P_g) * self.neighbor_tightness(R_g, P_g)
         AVRD_g = self.AVRD(R_g, P_g)
         BST_g = self.BST(review_times_g)
-        anomaly_score = 3 * Π + np.sum(AVRD_g)/R_gnorm + np.sum(BST_g)/R_gnorm
+        anomaly_score = 3 * group_anomaly_compactness + np.sum(AVRD_g)/R_gnorm + np.sum(BST_g)/R_gnorm
         return anomaly_score
     
 
