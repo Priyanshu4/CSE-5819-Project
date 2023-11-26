@@ -160,3 +160,36 @@ class timer:
             timer.NAMED_TAPE[self.named] += timer.time() - self.start
         else:
             self.tape.append(timer.time() - self.start)
+
+def print_table(headers: list, data: list, print_func = print):
+    """
+    Print a table with the first column left-justified and the remaining columns right-justified.
+
+    Arguments:
+        headers: List of headers for the columns.
+        data: List of dictionaries, where each dictionary represents a row in the table.
+        print_func: Optional function to use to print the table. Defaults to print.
+    """
+
+    # Find the maximum width of each column including the header
+    widths = [len(header) for header in headers]
+    for row in data:
+        for i, header in enumerate(headers):
+            widths[i] = max(widths[i], len(str(row.get(header, ''))))
+
+    # Define a format string with the first column left-justified
+    # and the rest right-justified based on the widths
+    format_string = "{:<" + str(widths[0]) + "}"  # Left justify the first column
+    for w in widths[1:]:
+        format_string += " {:>" + str(w) + "}"  # Right justify the remaining columns
+
+    # Print the header row
+    print_func(format_string.format(*headers))
+
+    # Print the separator
+    print_func("-" * (sum(widths) + len(headers) - 1))
+
+    # Print the data rows
+    for row in data:
+        print_func(format_string.format(*[row.get(header, '') for header in headers]))
+
