@@ -5,6 +5,7 @@ import pickle
 import os
 import multiprocessing
 import numpy as np
+import json
 
 from src.dataloader import DataLoader, YelpNycDataset
 from src.config import DATASETS_CONFIG_PATH, get_results_path, get_logger
@@ -155,14 +156,22 @@ if __name__ == "__main__":
     experiment_name = args.name + utils.current_timestamp()
     results_path = get_results_path(experiment_name)
 
+    # Write a json file with the experiment parameters
+    json.dump(vars(args), open(results_path / "params.json", 'w'))
+
+    # Get Logger
     logger = get_logger("Logger", results_path, args.name)
+
+    # Load Dataset
     logger.info(f"Loading dataset {args.dataset}.")
     dataset = dataloader.load_dataset(args.dataset)
 
+    # Set seed
     utils.set_seed(args.seed)
     logger.info(f"SEED: {args.seed}")
 
     if args.embeddings:
+        # If embeddings are already given, skip training.
         logger.info(f"Skipping training. Loading embeddings from {args.embeddings}")
         user_embs = dataloader.load_user_embeddings(args.embeddings)
     else:
