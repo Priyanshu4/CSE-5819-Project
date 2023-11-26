@@ -145,6 +145,9 @@ if __name__ == "__main__":
     parser.add_argument("--optimizer", type=str, default="adam", help="optimizer, options: adam, sgd")
     parser.add_argument("--fast_simi", action="store_true", help="faster sampling for simi loss, use for very large & sparse datasets")
     parser.add_argument("--name", type=str, default="", help="The name to add to the embs file and log file names.")
+    parser.add_argument("--tau", type=float, default=0, help="The threshold for burstness.")
+    parser.add_argument("--embeddings", type=str, default="", 
+            help="The path to the embeddings file. If given, training is skipped and clustering is done directly.")
     args = parser.parse_args()
 
     logger = utils.configure_logger("Logger", LOGS_PATH, args.name, "info")
@@ -154,15 +157,23 @@ if __name__ == "__main__":
     utils.set_seed(args.seed)
     logger.info(f"SEED: {args.seed}")
 
-    user_embs = embedding_main(args, dataset, logger)
-
-    if args.name:
-        embeddings_save_file = EMBEDDINGS_PATH / f'embs_{args.name}_{utils.current_timestamp()}.pkl'
+    if args.embeddings:
+        logger.info(f"Skipping training. Loading embeddings from {args.embeddings}")
+        user_embs = dataloader.load_user_embeddings(args.embeddings)
     else:
-        embeddings_save_file = EMBEDDINGS_PATH / f'embs_{utils.current_timestamp()}.pkl'
+        user_embs = embedding_main(args, dataset, logger)
 
-    pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
-    logger.info(f"Saved user embeddings to {embeddings_save_file}")
+        if args.name:
+            embeddings_save_file = EMBEDDINGS_PATH / f'embs_{args.name}_{utils.current_timestamp()}.pkl'
+        else:
+            embeddings_save_file = EMBEDDINGS_PATH / f'embs_{utils.current_timestamp()}.pkl'
+
+        pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
+        logger.info(f"Saved user embeddings to {embeddings_save_file}")
+
+    clustering_main(args, dataset, user_embs, logger)
+
+    
 
 
 
