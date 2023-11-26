@@ -6,9 +6,6 @@ class HClust:
         self.data = data
         self.Z = None
 
-    def p(test):
-        return test
-
     def generate_linkage_matrix(self, method='average'):
         """
         Generates linkage matrix from given data
