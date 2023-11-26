@@ -183,6 +183,7 @@ if __name__ == "__main__":
         logger.info(f"Saved user embeddings to {results_path}")
 
     save_embeddings_plot(user_embs, dataset.user_labels, results_path / "embeddings.png")
+    logger.info(f"Saved embeddings plot to {results_path}")
 
     clustering_main(args, dataset, user_embs, logger)
 
