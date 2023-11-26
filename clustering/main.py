@@ -46,13 +46,13 @@ def find_leaves_wrapper(args):
 def get_args():
     parser = argparse.ArgumentParser(
     usage='%(prog)s --data=<DATANAME>',
-    description="This program requires a data argument (--data)."
+    description="This program requires a data and tau arguments (--data) (--tau)."
 )
 
     # Create a `--data` argument with an optional string value
     parser.add_argument("--data", type=str, help="Data argument", required=True)
     parser.add_argument("--dend", action='store_true', help="Use if you want to get the dendrogram visualization")
-    parser.add_argument("--tau", type=int, help="Data argument", required=True)
+    parser.add_argument("--tau", type=int, help="Tau Hyperparemeter argument", required=True)
 
 
     args = parser.parse_args()
