@@ -163,7 +163,7 @@ if __name__ == "__main__":
     results_path = get_results_path(experiment_name)
 
     # Write a json file with the experiment parameters
-    json.dump(vars(args), open(results_path / "params.json", 'w'))
+    json.dump(vars(args), open(results_path / "params.json", 'w'), indent=4)
 
     # Get Logger
     logger = get_logger("Logger", results_path, args.name)
