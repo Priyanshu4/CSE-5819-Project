@@ -2,15 +2,18 @@ from pathlib import Path
 
 CONFIGS_PATH = Path(__file__).parent.parent / "configs"
 DATASETS_CONFIG_PATH = CONFIGS_PATH / "datasets.json"
-RESULTS_PATH = Path(__file__).parent.parent / "results"
-EMBEDDINGS_PATH = RESULTS_PATH / "embeddings"
-LOGS_PATH = RESULTS_PATH / "logs"
+ALL_RESULTS_PATH = Path(__file__).parent.parent / "results"
 
-if not RESULTS_PATH.exists():
-    RESULTS_PATH.mkdir()
 
-if not LOGS_PATH.exists():
-    LOGS_PATH.mkdir()
+def get_results_path(name: str):
+    """ Returns the path to the results of the experiment with the given name.
+    """
+    if not ALL_RESULTS_PATH.exists():
+        ALL_RESULTS_PATH.mkdir()
 
-if not EMBEDDINGS_PATH.exists():
-    EMBEDDINGS_PATH.mkdir()
+    results_path = ALL_RESULTS_PATH / name
+
+    if not results_path.exists():
+        results_path.mkdir()
+
+    return results_path.resolve()

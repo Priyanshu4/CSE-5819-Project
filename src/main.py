@@ -7,7 +7,7 @@ import multiprocessing
 import numpy as np
 
 from src.dataloader import DataLoader, YelpNycDataset
-from src.config import DATASETS_CONFIG_PATH, LOGS_PATH, EMBEDDINGS_PATH
+from src.config import DATASETS_CONFIG_PATH, get_results_path
 import src.utils as utils
 
 from src.embedding.lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
@@ -123,9 +123,11 @@ def clustering_main(args, dataset, user_embs, logger):
 
     # TODO: Make a testing script to test different anomaly score thresholds and compute metrics
 
-
-
 if __name__ == "__main__":
+
+    cwd = Path.cwd()
+    if cwd != Path(__file__).parent.parent:
+        raise RuntimeError("Please run this script from the project root. Use command python -m src.main")
 
     dataloader = DataLoader(DATASETS_CONFIG_PATH)
     
@@ -144,13 +146,16 @@ if __name__ == "__main__":
     parser.add_argument("--loss", type=str, default="simi", help="loss function, options: bpr, simi")
     parser.add_argument("--optimizer", type=str, default="adam", help="optimizer, options: adam, sgd")
     parser.add_argument("--fast_simi", action="store_true", help="faster sampling for simi loss, use for very large & sparse datasets")
-    parser.add_argument("--name", type=str, default="", help="The name to add to the embs file and log file names.")
+    parser.add_argument("--name", type=str, default="", help="The experiment name for the results folder.")
     parser.add_argument("--tau", type=float, default=0, help="The threshold for burstness.")
     parser.add_argument("--embeddings", type=str, default="", 
             help="The path to the embeddings file. If given, training is skipped and clustering is done directly.")
     args = parser.parse_args()
 
-    logger = utils.configure_logger("Logger", LOGS_PATH, args.name, "info")
+    experiment_name = args.name + utils.current_timestamp()
+    results_path = get_results_path(experiment_name)
+
+    logger = utils.configure_logger("Logger", results_path, args.name, "info")
     logger.info(f"Loading dataset {args.dataset}.")
     dataset = dataloader.load_dataset(args.dataset)
 
@@ -162,14 +167,9 @@ if __name__ == "__main__":
         user_embs = dataloader.load_user_embeddings(args.embeddings)
     else:
         user_embs = embedding_main(args, dataset, logger)
-
-        if args.name:
-            embeddings_save_file = EMBEDDINGS_PATH / f'embs_{args.name}_{utils.current_timestamp()}.pkl'
-        else:
-            embeddings_save_file = EMBEDDINGS_PATH / f'embs_{utils.current_timestamp()}.pkl'
-
+        embeddings_save_file = results_path / "embeddings.pkl"
         pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
-        logger.info(f"Saved user embeddings to {embeddings_save_file}")
+        logger.info(f"Saved user embeddings to {results_path}")
 
     clustering_main(args, dataset, user_embs, logger)
 
