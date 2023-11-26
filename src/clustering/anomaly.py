@@ -70,7 +70,7 @@ class AnomalyScore:
         L_g (float) - penalty for the group
         """
         R_gnorm = len(R_g)
-        P_gnorm = self.group_set_union(P_g).sum()
+        P_gnorm = self.group_set_union(P_g_bit).sum()
         L_g = 1 / (1 + np.e**(-1 * (R_gnorm + P_gnorm - 3)))
         return L_g
 
