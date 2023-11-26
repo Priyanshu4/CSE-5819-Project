@@ -126,7 +126,7 @@ def log_dbscan_results(results: dict, logger: logging.Logger):
             "F1 Score": f"{result['f1_score']:.3f}",
         })
     utils.print_table(headers, results_data, logger.info)    
-    return results    
+    return results
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test Clustering Technique')
