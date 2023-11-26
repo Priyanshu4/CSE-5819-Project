@@ -17,9 +17,8 @@ def save_embeddings_plot(embeddings: np.array, labels: np.array, path: Path):
     users, features = np.shape(embeddings)
 
     if features > 2:
-        print("Reduced dimensionality with TSNE")
         tsne = TSNE(n_components=2)
-        embeddings = TSNE.fit_transform(embeddings)
+        embeddings = tsne.fit_transform(embeddings)
 
     mask = labels == 0
 
