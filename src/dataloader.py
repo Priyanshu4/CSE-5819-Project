@@ -108,8 +108,8 @@ class BasicDataset:
 
     @property
     def user_labels(self):
-        """Node labels as numpy array
-        1 indicates fradulent user
+        """Node labels as numpy array.
+        1 indicates fradulent user,
         0 indicates non-fradulent user
         """
         raise NotImplementedError
@@ -194,8 +194,8 @@ class GraphUser2ItemDataset(BasicDataset):
 
     @property
     def user_labels(self):
-        """Node labels as numpy array
-        1 indicates fradulent user
+        """Node labels as numpy array.
+        1 indicates fradulent user,
         0 indicates non-fradulent user
         """
         return self._labels

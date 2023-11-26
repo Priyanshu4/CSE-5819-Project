@@ -7,6 +7,11 @@ import multiprocessing
 import numpy as np
 import json
 
+# Absolute imports only work if ran from the root directory
+cwd = Path.cwd()
+if cwd != Path(__file__).parent.parent:
+    raise RuntimeError("Please run this script from the project root. Use command python -m src.main")
+
 from src.dataloader import DataLoader, YelpNycDataset
 from src.config import DATASETS_CONFIG_PATH, get_results_path, get_logger
 import src.utils as utils
@@ -14,6 +19,7 @@ import src.utils as utils
 from src.embedding.lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
 from src.embedding.loss import SimilarityLoss, BPRLoss
 from src.embedding import training
+from src.visualization.embvis import save_embeddings_plot
 
 from src.clustering.hclust import HClust
 from src.clustering.anomaly import AnomalyScore
@@ -126,10 +132,6 @@ def clustering_main(args, dataset, user_embs, logger):
 
 if __name__ == "__main__":
 
-    cwd = Path.cwd()
-    if cwd != Path(__file__).parent.parent:
-        raise RuntimeError("Please run this script from the project root. Use command python -m src.main")
-
     dataloader = DataLoader(DATASETS_CONFIG_PATH)
     
     parser = argparse.ArgumentParser(description="Go lightGCN")
@@ -179,6 +181,8 @@ if __name__ == "__main__":
         embeddings_save_file = results_path / "embeddings.pkl"
         pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
         logger.info(f"Saved user embeddings to {results_path}")
+
+    save_embeddings_plot(user_embs, dataset.user_labels, results_path / "embeddings.png")
 
     clustering_main(args, dataset, user_embs, logger)
 
