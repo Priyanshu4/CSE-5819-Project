@@ -52,6 +52,8 @@ def get_args():
     # Create a `--data` argument with an optional string value
     parser.add_argument("--data", type=str, help="Data argument", required=True)
     parser.add_argument("--dend", action='store_true', help="Use if you want to get the dendrogram visualization")
+    parser.add_argument("--tau", type=int, help="Data argument", required=True)
+
 
     args = parser.parse_args()
     dataname = args.data
@@ -83,9 +85,8 @@ def create_dirs(dataname):
 
     return run_folder
 
-def main_hclust():
+def main_hclust(args, arg_dict, dataname):
 
-    args, arg_dict, dataname = get_args()
     run_folder = create_dirs(dataname)
     datapath = arg_dict['data'][dataname]
     mappath = arg_dict['data'][dataname]
@@ -132,7 +133,7 @@ def get_mapping(mappath):
         mapping = pickle.load(mf)
     return mapping
 
-def main_anomaly(leaves, mappath):
+def main_anomaly(leaves, mappath, args):
     dataset = get_dataset()
     mapping = get_mapping(mappath)
     adj = dataset.graph_u2i.toarray()
@@ -143,11 +144,11 @@ def main_anomaly(leaves, mappath):
     last_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].max()
     review_times = (last_date-first_date).astype('timedelta64[D]')
 
-    AS = AnomalyScore(leaves,mapping,adj,average_ratings,rating_matrix,review_times)
+    AS = AnomalyScore(leaves,mapping,adj,average_ratings,rating_matrix,review_times, args.tau)
     scores = AS.generate_anomaly_scores()
     return scores, AS.mapped_leaves
 
 if __name__ == "__main__":
-
-    leaves, mappath = main_hclust()
-    main_anomaly(leaves, mappath)
+    args, args_dict, dataname = get_args()
+    leaves, mappath = main_hclust(args, args_dict, dataname)
+    main_anomaly(leaves, mappath, args)
