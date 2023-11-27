@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Optional
+import bitarray
 
 from src.dataloader import BasicDataset
 from src.similarity import UserSimilarity
@@ -30,6 +30,10 @@ class AnomalyScore:
 
         self.burstness_threshold = burstness_threshold
 
+        # Create bitarrays of all 1s and all 0s
+        self.all_products = bitarray('1'*self.adj.shape[1])
+        self.no_products = bitarray('0'*self.adj.shape[1])
+
     def group_product_set_union(self, P_g_bit):
         """Generate the union of all products in the group.
                 
@@ -39,7 +43,7 @@ class AnomalyScore:
         OUTPUTS:
             union - union of all products in the group as bitarray
         """
-        union = None
+        union = self.no_products
         for p in P_g_bit:
             union = union | p
         return union
@@ -64,7 +68,7 @@ class AnomalyScore:
         
         OUTPUTS:
             intersection - intersection of all products in the group as bitarray"""
-        intersection = None
+        intersection = self.all_products
         for p in P_g_bit:
             intersection = intersection & p
         return intersection
@@ -145,6 +149,7 @@ class AnomalyScore:
     def average_jaccard(self, group):
         """
         Compute average Jaccard similarity between all pairs of users in a group.
+        If there is only 0 or 1 users in the group, this returns 1.
 
         INPUTS:
             group (arr) - list of users in the group
@@ -153,6 +158,10 @@ class AnomalyScore:
             average_jaccard (float) - average jaccard similarity between all pairs of users
         """
         users = len(group)
+
+        if users <= 1:
+            return 1
+        
         similarity_scores = [
             self.user_simi.get_jaccard_similarity(group[i], group[j])
             for i in range(users)
