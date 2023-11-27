@@ -1,5 +1,4 @@
 import numpy as np
-from functools import reduce
 from typing import Optional
 
 from src.dataloader import BasicDataset
@@ -10,15 +9,13 @@ class AnomalyScore:
         https://arxiv.org/pdf/2112.06403.pdf
     """
 
-    def __init__(self, clusters, dataset: BasicDataset, use_metadata = True, burstness_threshold=0):
+    def __init__(self, dataset: BasicDataset, use_metadata = True, burstness_threshold=0):
         """ 
         INPUTS:
-        clusters (arr) - list of clusters, where each cluster is a list of users
-        dataset (BasicDataset) - dataset object
-        use_metadata (bool) - whether to use metadata (review times and average ratings) or not
-        burstness_threshold (int) - threshold for burstness
+            dataset (BasicDataset) - dataset object
+            use_metadata (bool) - whether to use metadata (review times and average ratings) or not
+            burstness_threshold (int) - threshold for burstness
         """
-        self.clusters = clusters
         self.use_metadata = use_metadata
         self.adj = dataset.graph_u2i.toarray().astype(int)
         self.user_simi = UserSimilarity(dataset.graph_u2i)
@@ -33,114 +30,172 @@ class AnomalyScore:
 
         self.burstness_threshold = burstness_threshold
 
-    def group_set_union(self, P_g_bit):
-        """Generate the union of all products in the group
-           Products that were rated by any user in the group will be 1, otherwise 0
+    def group_product_set_union(self, P_g_bit):
+        """Generate the union of all products in the group.
+                
+        INPUTS:
+            P_g_bit - list of product sets in the group as bitarrays 
+            
+        OUTPUTS:
+            union - union of all products in the group as bitarray
         """
         union = None
         for p in P_g_bit:
             union = union | p
-    
-    def group_set_intersection(self, P_g_bit):
-        """Generate the intersection of all products in the group
-           Products that were rated by all users in the group will be 1, otherwise 0
+        return union
+
+    def total_products_reviewed_count(self, P_g_bit):
+        """ Get the total number of products reviewed by any users in the group.
+                
+        INPUTS:
+            P_g_bit - list of product sets in the group as bitarrays 
+            
+        OUTPUTS:
+            total_products_reviewed - total number of products reviewed by any users in the group
         """
+        total_products_reviewed = self.group_product_set_union(P_g_bit).count()
+        return total_products_reviewed
+       
+    def group_product_set_intersection(self, P_g_bit):
+        """Generate the intersection of all products in the group
+
+        INPUTS:
+            P_g_bit - list of product sets in the group as bitarrays        
+        
+        OUTPUTS:
+            intersection - intersection of all products in the group as bitarray"""
         intersection = None
         for p in P_g_bit:
             intersection = intersection & p
+        return intersection
 
+    def common_products_reviewed_count(self, P_g_bit):
+        """ Get the total number of products reviewed by all users in the group.
+                
+        INPUTS:
+            P_g_bit - list of product sets in the group as bitarrays 
+            
+        OUTPUTS:
+            common_products_reviewed - number of products reviewed by all users in the group
+        """
+        common_products_reviewed = self.group_product_set_intersection(P_g_bit).count()
+        return common_products_reviewed
+    
     def group_review_count(self, P_g_bit):
-        """Generate the total number of reviews of all user in the group
-        """
-        sum = 0
-        for p in P_g_bit:
-            sum += p.count()
-        return sum
+        """Get the total number of reviews of all user in the group.
 
-    def penalty_function(self, R_g, P_g_bit):
+        INPUTS:
+            P_g_bit - list of product sets in the group as bitarrays
+        
+        OUTPUTS:
+            reviews - total number of reviews of all user in the group
         """
-        Generates penalty function for the anomaly scores given a list of reviewers and products that they reviewed.
+        reviews = 0
+        for p in P_g_bit:
+            reviews += p.count()
+        return reviews
+
+    def penalty_function(self, n_users_in_group, n_total_products_reviewed):
+        """
+        Generates penalty function a group of users.
         Penalizes smaller groups because they are less likely to be a fake review farm.
 
         INPUTS:
-        R_g (arr) - users in the group
-        P_g_bit   - product sets in the group
+            n_users_in_group (int) - number of users in the group
+            n_total_products_reviewed (int) - total number of products reviewed by any users in the group
 
         OUTPUTS:
-        L_g (float) - penalty for the group
+            L_g (float) - penalty for the group
         """
-        R_gnorm = len(R_g)
-        P_gnorm = self.group_set_union(P_g_bit).sum()
-        L_g = 1 / (1 + np.e**(-1 * (R_gnorm + P_gnorm - 3)))
+        L_g = 1 / (1 + np.e**(-1 * (n_users_in_group + n_total_products_reviewed - 3)))
         return L_g
 
-    def review_tightness(self, R_g, P_g_bit):
+    def review_tightness(self, n_users_in_group, n_total_reviews, n_total_products_reviewed, penalty):
         """
-        Generates review tightness for the anomaly scores given a list of reviewers and products that they reviewed
+        Generates review tightness for a group.
 
         INPUTS:
-        R_g (arr) - users in the group
-        P_g_bit   - product sets in the group
+            n_users_in_group (int) - number of users in the group
+            n_total_reviews (int) - total number of reviews of all user in the group
+            n_total_products_reviewed (int) - total number of products reviewed by any users in the group
+            penalty (float) - size penalty for the group, L_g
 
         OUTPUTS:
-        RT_g (float) - review tightness for the group
+            RT_g (float) - review tightness for the group
         """
-        R_gnorm = len(R_g)
-        P_gnorm = self.group_set_union(P_g_bit).count()
-        L_g = self.penalty_function(R_g, P_g_bit)
-        RT_g = (self.group_review_count(P_g_bit) * L_g) / (R_gnorm * P_gnorm)
+        RT_g = (n_total_reviews * penalty) / (n_users_in_group * n_total_products_reviewed)
         return RT_g
 
 
-    def product_tightness(self, P_g_bit):
+    def product_tightness(self, n_total_products_reviewed, n_common_products_reviewed):
         """
-        Generates product tightness for the anomaly scores given a list of reviewers and products that they reviewed
+        Generates product tightness for a group of users.
 
         INPUTS:
-        P_g_bit - product sets in the group
+            total_products_reviewed_count (int) - total number of products reviewed by any users in the group
+            common_products_reviewed_count (int) - number of products reviewed by all users in the group
 
         OUTPUTS:
-        PT_g (float) - product tightness for the group
+            PT_g (float) - product tightness for the group
         """
-        union_count = self.group_set_union(P_g_bit).count()
-        intersection_count = self.group_set_intersection(P_g_bit).count()
-        PT_g = 0 if union_count == 0 else intersection_count / union_count
-        return PT_g
+        if n_total_products_reviewed == 0:
+           return 0
+        return n_common_products_reviewed / n_total_products_reviewed
     
-    def sum_jaccard(self, R_g):
+    def average_jaccard(self, group):
         """
-        Compute Jaccard similarity between all pairs of users and sum the scores
+        Compute average Jaccard similarity between all pairs of users in a group.
+
+        INPUTS:
+            group (arr) - list of users in the group
+
+        OUTPUTS:
+            average_jaccard (float) - average jaccard similarity between all pairs of users
         """
-        users = R_g
-        if users <= 1:
-            return 0
-    
+        users = len(group)
         similarity_scores = [
-            self.user_simi.get_jaccard_similarity(R_g[i], R_g[j])
+            self.user_simi.get_jaccard_similarity(group[i], group[j])
             for i in range(users)
             for j in range(i + 1, users)
         ]
         
-        return sum(similarity_scores)
+        return 2 * sum(similarity_scores) / users
 
-
-    def neighbor_tightness(self, R_g, P_g_bit):
+    def neighbor_tightness(self, group, penalty):
         """
-        Generates product tightness for the anomaly scores given a list of reviewers and products that they reviewed
+        Generates neighbor tightness for a group of users.
 
         INPUTS:
-        R_g (arr) - users in the group
-        P_g_bit   - product sets in the group
+            group (arr) - list of users in the group
+            penalty (float) - size penalty for the group, L_g
 
         OUTPUTS:
-        
-        NT_g (float) - product tightness for the group
+            NT_g (float) - neighbor tightness for the group
         """
-        R_gnorm = len(R_g)
-        js = self.sum_jaccard(R_g)
-        L_g = self.penalty_function(R_g, P_g_bit)
-        NT_g = (2 * js * L_g) / R_gnorm
+        NT_g = self.average_jaccard(group) * penalty
         return NT_g
+    
+    def group_anomaly_compactness(self, group):
+        """
+        Generates group anomaly compactness for a group of users.
+
+        INPUTS:
+            group (arr) - list of users in the group
+
+        OUTPUTS:
+            Pi_g (float) - group anomaly compactness for the group
+        """
+        P_g_bit = self.user_simi.get_user_bitarrays(group)
+        n_users_in_group = len(group)
+        n_total_products_reviewed = self.total_products_reviewed_count(P_g_bit)
+        n_common_products_reviewed = self.common_products_reviewed_count(P_g_bit)
+        n_total_reviews = self.group_review_count(P_g_bit)
+        penalty = self.penalty_function(n_users_in_group, n_total_products_reviewed)
+        RT_g = self.review_tightness(n_users_in_group, n_total_reviews, n_total_products_reviewed, penalty)
+        PT_g = self.product_tightness(n_total_products_reviewed, n_common_products_reviewed)
+        NT_g = self.neighbor_tightness(group, penalty)
+        Pi_g = 3 * RT_g * PT_g * NT_g
+        return Pi_g
 
     def AVRD(self, R_g, P_g):
         """
@@ -158,40 +213,29 @@ class AnomalyScore:
         BST_g = np.where(review_periods_g < self.burstness_threshold, 1 - review_periods_g / self.burstness_threshold, 0)
         return BST_g
     
-    def generate_single_anomaly_score(self, R_g, P_g, P_g_bit, review_periods_g: Optional[np.ndarray] = None):
-        """Generate single anomaly score for a cluster.
+    def anomaly_score(self, group):
+        """Generate anomaly score for a group of users.
         
         INPUTS:
-        R_g (arr) - users in the group
-        P_g (arr) - product sets in the group as numpy array of 0s and 1s
-                    shape (num_users_in_group, num_products_in_entire_dataset)
-        P_g_bit   - list of product sets in the group as bitarrays of 0s and 1s
-                    list of length num_users_in_group with bitarrays of length num_products_in_entire_dataset
-        review_periods_g (arr) - period between the first and last review for the users in the group
+        group (arr) - list of users in the group
         """
-        R_gnorm = len(R_g)
-        group_anomaly_compactness = self.review_tightness(R_g, P_g_bit) * self.product_tightness(P_g_bit) * self.neighbor_tightness(R_g, P_g_bit)
-
+        Pi_g = self.group_anomaly_compactness(group)
+        anomaly_score = 3 * Pi_g
         if self.use_metadata:
-            AVRD_g = self.AVRD(R_g, P_g)
-            BST_g = self.BST(review_periods_g)
-            anomaly_score = 3 * group_anomaly_compactness + np.sum(AVRD_g)/R_gnorm + np.sum(BST_g)/R_gnorm
-        else:
-            anomaly_score = 3 * group_anomaly_compactness
+            P_g = self.adj[group]
+            AVRD_g = self.AVRD(group, P_g)
+            BST_g = self.BST(self.review_periods[group])
+            anomaly_score = anomaly_score + np.mean(AVRD_g) + np.mean(BST_g)
+        return anomaly_score    
 
-        return anomaly_score
-    
-
-    def generate_anomaly_scores(self):
-        """Generate all anomaly scores for all clusters"""
-        anomaly_scores = list()
-        for R_g in self.clusters:
-            P_g_bit = self.user_simi.get_user_bitarrays(R_g)
-            P_g = self.adj[R_g]
-            if self.use_metadata:
-                score = self.generate_single_anomaly_score(R_g, P_g, P_g_bit, self.review_periods[R_g])
-            else:
-                score = self.generate_single_anomaly_score(R_g, P_g_bit)
-            anomaly_scores.append(score)
+    def generate_anomaly_scores(self, clusters):
+        """ Generate anomaly scores for a group of clusters.
+        
+        OUTPUTS:
+            anomaly_scores (arr) - list of anomaly scores for each cluster
+        """
+        anomaly_scores = np.zeros(len(clusters))
+        for i, group in enumerate(clusters):
+            anomaly_scores[i] = self.anomaly_score(group)
         return anomaly_scores
 

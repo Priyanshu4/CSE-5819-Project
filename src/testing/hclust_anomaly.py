@@ -42,8 +42,8 @@ def test_hclust_anomaly_main(dataset, user_embs, tau, logger):
     # Generate anomaly scores
     with utils.timer(name="anomaly_scores"):
         use_metadata = (type(dataset) == YelpNycDataset)
-        anomaly_scorer = AnomalyScore(all_clusters, dataset, use_metadata=use_metadata, burstness_threshold=tau)
-        anomaly_scores = anomaly_scorer.generate_anomaly_scores()
+        anomaly_scorer = AnomalyScore(dataset, use_metadata=use_metadata, burstness_threshold=tau)
+        anomaly_scores = anomaly_scorer.generate_anomaly_scores(clusters=all_clusters)
     anomaly_score_time_info = utils.timer.formatted_tape_str(select_keys=["anomaly_scores"])
     utils.timer.zero(select_keys=["anomaly_scores"])
     logger.info(f"Anomaly Score Time: {anomaly_score_time_info}")
