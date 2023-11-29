@@ -1,13 +1,12 @@
 #!/bin/bash
 
-#SBATCH --partition=general-gpu
-#SBATCH --constraint='v100'
+#SBATCH --partition=general
 #SBATCH --ntasks=12
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=priyanshu.agrawal+hpc@uconn.edu      
 #SBATCH --mem=16G
-#SBATCH --job-name=lgcn_adam_100ep_16d 
+#SBATCH --job-name=synthetic_1k
 
 module purge
 
@@ -17,4 +16,4 @@ conda activate fake-review-detection
 
 cd ..
 
-python -m src.main --name adam_100ep_8d --dataset yelpnyc --loss simi --optimizer adam --epochs 100 --dim 16 --clustering dbscan
+python -m src.main --name synthetic_1k --dataset synthetic_easy_1000 --loss simi --optimizer adam --epochs 100 --dim 8 --clustering hclust
