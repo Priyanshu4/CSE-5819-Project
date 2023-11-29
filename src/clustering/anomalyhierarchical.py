@@ -44,7 +44,7 @@ class AnomalyGroup:
         return group
     
     @staticmethod
-    def make_single_user_group(self, user: int, user_simi: UserSimilarity):
+    def make_single_user_group(user: int, user_simi: UserSimilarity):
         users = [user]
         group_product_set_intersection = user_simi.get_user_bitarray(user)
         group_product_set_union = user_simi.get_user_bitarray(user)
@@ -187,6 +187,10 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
         last_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].max()
         review_periods = (last_date-first_date).astype('timedelta64[D]')
         burstness = np.where(review_periods < burstness_threshold, 1 - review_periods / burstness_threshold, 0)
+
+    else:
+        avrd = None
+        burstness = None
 
     groups = []
     anomaly_scores = np.zeros(dataset.n_users + len(linkage_matrix), dtype=float)
