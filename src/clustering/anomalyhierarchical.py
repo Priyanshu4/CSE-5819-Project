@@ -189,20 +189,20 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
         burstness = np.where(review_periods < burstness_threshold, 1 - review_periods / burstness_threshold, 0)
 
     groups = []
-    anomaly_scores = []
+    anomaly_scores = np.zeros(dataset.n_users + len(linkage_matrix), dtype=float)
 
     for user in range(dataset.n_users):
         group = AnomalyGroup.make_single_user_group(user, user_simi)
         score = get_overall_anomaly_score(group.users, group.group_anomaly_compactness(), use_metadata, avrd, burstness)
-        anomaly_scores.append(score)
+        anomaly_scores[user] = score
         groups.append(group)
  
-    for row in linkage_matrix:
+    for i, row in enumerate(linkage_matrix):
         child1 = row[0]
         child2 = row[1]
-        group = AnomalyGroup(groups[child1], groups[child2])
+        group = AnomalyGroup.make_group_from_children(groups[child1], groups[child2], user_simi)
         score = get_overall_anomaly_score(group.users, group.group_anomaly_compactness(), use_metadata, avrd, burstness)
-        anomaly_scores.append(score)
+        anomaly_scores[i + dataset.n_users] = score
         groups.append(group)
 
     return groups, anomaly_scores

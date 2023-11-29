@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 import pickle
 import json
+import numpy as np
 
 # Absolute imports only work if ran from the root directory
 cwd = Path.cwd()
@@ -18,8 +19,12 @@ from src.embedding.loss import SimilarityLoss, BPRLoss
 from src.embedding import training
 from src.visualization.embvis import save_embeddings_plot
 
-from src.testing.hclust_anomaly import test_hclust_anomaly_main
+from src.clustering.hclust import HClust
+from src.clustering.anomalyhierarchical import hierarchical_anomaly_scores
+from src.clustering import split
+
 from src.testing.dbscan import test_optics_dbscan_fraud_detection, log_dbscan_results
+from src.testing.clust_anomaly import test_clust_anomaly_fraud_detection, log_clust_anomaly_results
 
 def embedding_main(args, dataset, logger):
     """ Main code for the lightgcn training and embedding generation.
@@ -98,7 +103,37 @@ def clustering_main(args, dataset, user_embs, logger):
 
     if args.clustering == "hclust":
         logger.info("Clustering with hierarchical clustering and anomaly scores for fraud detection.")
-        test_hclust_anomaly_main(dataset, user_embs, args.tau, logger)
+        if n_users > 60000:
+            logger.warning(f"Splitting {n_users} into groups with max size 60000.")
+            groups, group_indices = split.split_matrix_random(user_embs, approx_group_sizes=60000)
+        else:
+            groups, group_indices = split.split_matrix_random(user_embs, num_groups=1)
+
+        all_groups = []
+        all_anomaly_scores = []
+
+        for i, group in enumerate(groups):
+            
+            with utils.timer(name="linkages"):
+                hclust = HClust(group)
+                linkage = hclust.generate_linkage_matrix()
+
+            # Generate anomaly scores
+            with utils.timer(name="anomaly_scores"):
+                use_metadata = (type(dataset) == YelpNycDataset)
+                groups, anomaly_scores = hierarchical_anomaly_scores(linkage, dataset, use_metadata=use_metadata, burstness_threshold=args.tau)
+                all_groups.extend(groups)
+                all_anomaly_scores.append(anomaly_scores)
+
+        time_info = utils.timer.formatted_tape_str(select_keys=["linkages", "anomaly_scores"])
+        logger.info(f"Clustering Time: {time_info}")
+        utils.timer.zero(select_keys=["linkages", "anomaly_scores"])
+
+        all_anomaly_scores = np.concatenate(all_anomaly_scores)
+        all_anomaly_scores = all_anomaly_scores / np.max(all_anomaly_scores)
+        thresholds = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        results, best = test_clust_anomaly_fraud_detection(all_groups, all_anomaly_scores, thresholds, dataset.user_labels, logger)
+        log_clust_anomaly_results(thresholds, results, best, logger)
 
     if args.clustering == "dbscan":
         logger.info("Clustering with DBSCAN for density based fraud detection.")
