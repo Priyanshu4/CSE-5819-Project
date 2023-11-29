@@ -176,9 +176,10 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
         avg_ratings = dataset.metadata_df.groupby(dataset.METADATA_ITEM_ID)[dataset.METADATA_STAR_RATING].mean()
         average_ratings = avg_ratings.values
         rating_matrix = dataset.rated_graph_u2i.toarray()
-        
-        # TODO: Add AVRD array of all users
-        avrd = np.zeros(shape=dataset.n_users)
+
+        average_ratings_matrix = np.tile(average_ratings, (dataset.n_users, 1))
+        A_g = dataset.graph_u2i * average_ratings_matrix
+        avrd = np.abs(A_g - rating_matrix)
 
         first_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].min()
         last_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].max()
