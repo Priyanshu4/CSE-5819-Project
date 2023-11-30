@@ -1,4 +1,4 @@
 /data/yelpnyc/yelpnyc/
-/hclust/results
+.DS_Store
 token
 *.pyc
