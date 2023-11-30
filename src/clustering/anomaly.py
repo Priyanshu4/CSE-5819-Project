@@ -229,7 +229,7 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
         linkage_matrix: linkage matrix from scipy hierarchical clustering
         dataset: BasicDataset object
         use_metadata: boolean indicating whether to use metadata
-        burstness_threshold: threshold for burstness
+        burstness_threshold: threshold for burstness in days
 
     OUTPUTS:
         groups: list of AnomalyGroup objects
@@ -240,18 +240,23 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
 
     if use_metadata:
         avg_ratings = dataset.metadata_df.groupby(dataset.METADATA_ITEM_ID)[dataset.METADATA_STAR_RATING].mean()
-        average_ratings = avg_ratings.values
+        product_average_ratings = avg_ratings.values 
+        graph_u2i = dataset.graph_u2i.toarray()
         rating_matrix = dataset.rated_graph_u2i.toarray()
-
-        average_ratings_matrix = np.tile(average_ratings, (dataset.n_users, 1))
-        A_g = dataset.graph_u2i * average_ratings_matrix
-        avrd_mat = np.abs(A_g - rating_matrix)
-        avrd = np.sum(avrd_mat, axis=1)
+        print(f"Product avg ratings shape: {product_average_ratings.shape}")
+        print(f"Graph u2i shape: {graph_u2i.shape}")
+        print(f"Rating matrix shape: {rating_matrix.shape}")
+        average_ratings_matrix = np.tile(product_average_ratings, (dataset.n_users, 1))
+        print(f"Avg ratings matrix shape: {average_ratings_matrix.shape}")
+        diff_matrix = (rating_matrix - average_ratings_matrix) * graph_u2i
+        sum_of_diffs = np.sum(np.abs(diff_matrix), axis=1)
+        num_rated_products = np.sum(graph_u2i, axis=1)
+        avrd = np.where(num_rated_products != 0, sum_of_diffs / num_rated_products, 0)
 
 
         first_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].min()
         last_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].max()
-        review_periods = (last_date-first_date).astype('timedelta64[D]')
+        review_periods = (last_date-first_date).dt.days
         burstness = np.where(review_periods < burstness_threshold, 1 - review_periods / burstness_threshold, 0)
 
     else:
