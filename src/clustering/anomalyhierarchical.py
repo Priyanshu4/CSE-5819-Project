@@ -215,9 +215,9 @@ def get_overall_anomaly_score(group: AnomalyGroup, use_metadata: bool, avrd: np.
     if use_metadata:
         group_mean_avrd = np.mean(avrd[group.users])
         group_mean_burstness = np.mean(burstness[group.users])
-        score = 3 * group.group_anomaly_compactness + group_mean_avrd + group_mean_burstness
+        score = 3 * group.group_anomaly_compactness() + group_mean_avrd + group_mean_burstness
     else:
-        score = 3 * group.group_anomaly_compactness
+        score = 3 * group.group_anomaly_compactness()
     return score
 
 

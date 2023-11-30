@@ -16,7 +16,6 @@ def set_seed(seed: int):
     torch.manual_seed(seed)
     set_sampling_seed(seed)
 
-
 def sparse_matrix_to_tensor(X) -> torch.sparse_coo_tensor:
     coo = X.tocoo().astype(np.float32)
     row = torch.Tensor(coo.row).long()
@@ -24,7 +23,26 @@ def sparse_matrix_to_tensor(X) -> torch.sparse_coo_tensor:
     index = torch.stack([row, col])
     data = torch.FloatTensor(coo.data)
     return torch.sparse_coo_tensor(index, data, torch.Size(coo.shape))
-    
+
+class StreamToLogger:
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+        self.linebuf = ''
+
+    def write(self, buf):
+        self.linebuf += buf
+        while '\n' in self.linebuf:
+            line, self.linebuf = self.linebuf.split('\n', 1)
+            self.logger.log(self.level, line.rstrip())
+
+    def flush(self):
+        if self.linebuf:
+            self.logger.log(self.level, self.linebuf.rstrip())
+            self.linebuf = ''
 
 class timer:
     """

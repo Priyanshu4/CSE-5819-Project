@@ -4,11 +4,14 @@ from pathlib import Path
 import pickle
 import json
 import numpy as np
+import logging
+import sys
 
 # Absolute imports only work if ran from the root directory
 cwd = Path.cwd()
 if cwd != Path(__file__).parent.parent:
-    raise RuntimeError("Please run this script from the project root. Use command python -m src.main")
+    raise RuntimeError(f"Please run this script from the project root.\n" + 
+                       f"Use command python -m src.main in directory {Path(__file__).parent.parent.resolve()}")
 
 from src.dataloader import DataLoader, YelpNycDataset
 from src.config import DATASETS_CONFIG_PATH, get_results_path, get_logger
@@ -132,7 +135,8 @@ def clustering_main(args, dataset, user_embs, logger):
         all_anomaly_scores = np.concatenate(all_anomaly_scores)
         all_anomaly_scores = all_anomaly_scores / np.max(all_anomaly_scores)
         thresholds = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-        results, best = test_clust_anomaly_fraud_detection(all_groups, all_anomaly_scores, thresholds, dataset.user_labels, logger)
+        clusters = [group.users for group in all_groups]
+        results, best = test_clust_anomaly_fraud_detection(clusters, all_anomaly_scores, thresholds, dataset.user_labels)
         log_clust_anomaly_results(thresholds, results, best, logger)
 
     if args.clustering == "dbscan":
@@ -187,6 +191,7 @@ if __name__ == "__main__":
 
     # Get Logger
     logger = get_logger("Logger", results_path, args.name)
+    sys.stderr = utils.StreamToLogger(logger, logging.ERROR)
 
     # Load Dataset
     logger.info(f"Loading dataset {args.dataset}.")
