@@ -65,14 +65,14 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
     results_table = []
     for i, result in enumerate(results):
         results_table.append({
-            "Threshold": f"{threshold_values[i]:.1f}",
+            "Threshold": f"{threshold_values[i]:.3f}",
             "Accuracy": f"{result['accuracy']:.3f}",
             "Precision": f"{result['precision']:.3f}",
             "Recall": f"{result['recall']:.3f}",
             "F1 Score": f"{result['f1_score']:.3f}",
         })
     results_table.append({
-        "Threshold": f"Best ({threshold_values[best_threshold]:.1f})",
+        "Threshold": f"Best ({threshold_values[best_threshold]:.3f})",
         "Accuracy": f"{results[best_threshold]['accuracy']:.3f}",
         "Precision": f"{results[best_threshold]['precision']:.3f}",
         "Recall": f"{results[best_threshold]['recall']:.3f}",

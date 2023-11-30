@@ -23,7 +23,7 @@ from src.embedding import training
 from src.visualization.embvis import save_embeddings_plot
 
 from src.clustering.hclust import HClust
-from src.clustering.anomalyhierarchical import hierarchical_anomaly_scores
+from src.clustering.anomaly import hierarchical_anomaly_scores
 from src.clustering import split
 
 from src.testing.dbscan import test_optics_dbscan_fraud_detection, log_dbscan_results
