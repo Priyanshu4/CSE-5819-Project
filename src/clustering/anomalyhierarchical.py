@@ -25,7 +25,18 @@ class AnomalyGroup:
         self.child2 = child2
 
     @staticmethod
-    def make_group_from_children(child1: 'AnomalyGroup', child2: 'AnomalyGroup', user_simi: UserSimilarity):
+    def make_group_from_children(child1: 'AnomalyGroup', child2: 'AnomalyGroup', user_simi: UserSimilarity) -> 'AnomalyGroup':
+        """
+        Makes an anomaly group object from two child anomaly groups.
+
+        INPUTS:
+            child1 (AnomalyGroup) - AnomalyGroup object
+            child2 (AnomalyGroup) - AnomalyGroup object
+            user_simi (UserSimilarity) - UserSimilarity object
+        
+        OUTPUTS:
+            group (AnomalyGroup) - AnomalyGroup object
+        """
         users = child1.users + child2.users
         group_product_set_intersection = child1.group_product_set_intersection & child2.group_product_set_intersection
         group_product_set_union = child1.group_product_set_union | child2.group_product_set_union
@@ -44,7 +55,17 @@ class AnomalyGroup:
         return group
     
     @staticmethod
-    def make_single_user_group(user: int, user_simi: UserSimilarity):
+    def make_single_user_group(user: int, user_simi: UserSimilarity) -> 'AnomalyGroup':
+        """
+        Makes an anomaly group object for a single user.
+
+        INPUTS:
+            user - the user in the group
+            user_simi (UserSimilarity) - UserSimilarity object
+
+        OUTPUTS:    
+            group (AnomalyGroup) - AnomalyGroup object
+        """
         users = [user]
         group_product_set_intersection = user_simi.get_user_bitarray(user)
         group_product_set_union = user_simi.get_user_bitarray(user)
@@ -60,6 +81,38 @@ class AnomalyGroup:
 
         return group
 
+    
+    @staticmethod
+    def make_group(users: list, user_simi: UserSimilarity) -> 'AnomalyGroup':
+        """
+        Makes an anomaly group object from a list of users.
+
+        INPUTS:
+            users (list) - list of users in the group
+            user_simi (UserSimilarity) - UserSimilarity object
+
+        OUTPUTS:    
+            group (AnomalyGroup) - AnomalyGroup object
+        """
+        user_bitarrays = user_simi.get_user_bitarrays(users)
+        group_product_set_intersection = user_bitarrays[0]  
+        group_product_set_union = user_bitarrays[0]
+        n_total_reviews = user_bitarrays[0].count()
+        for i in range(1, len(user_bitarrays)):
+            group_product_set_intersection = group_product_set_intersection & user_bitarrays[i]
+            group_product_set_union = group_product_set_union | user_bitarrays[i]
+            n_total_reviews += user_bitarrays[i].count()
+
+        group = AnomalyGroup(
+            users=users,
+            group_product_set_intersection=group_product_set_intersection,
+            group_product_set_union=group_product_set_union,
+            n_total_reviews=n_total_reviews,
+            user_simi=user_simi
+        )
+
+        return group
+    
     def _penalty_function(self):
         """
         Generates penalty function a group of users.
@@ -78,8 +131,8 @@ class AnomalyGroup:
         OUTPUTS:
             RT_g (float) - review tightness for the group
         """
-        self.review_tightness = (self.n_total_reviews * self.penalty) / (self.n_users * self.n_total_products_reviewed)
-        return self.review_tightness
+        RT_g = (self.n_total_reviews * self.penalty) / (self.n_users * self.n_total_products_reviewed)
+        return RT_g
 
     def _product_tightness(self):
         """
@@ -90,8 +143,8 @@ class AnomalyGroup:
         """
         if self.n_total_products_reviewed == 0:
            return 0
-        self.product_tightness = self.n_common_products_reviewed / self.n_total_products_reviewed
-        return self.product_tightness
+        PT_g = self.n_common_products_reviewed / self.n_total_products_reviewed
+        return PT_g
     
     def _average_jaccard(self):
         """
@@ -114,7 +167,7 @@ class AnomalyGroup:
         child1_similarity_score_sum = self.child1.average_jaccard * self.child1.n_users
         child2_similarity_score_sum = self.child2.average_jaccard * self.child2.n_users
 
-        self.average_jaccard = (2 * similarity_scores_children + child1_similarity_score_sum + child2_similarity_score_sum) / self.n_users
+        self.average_jaccard = (2 * sum(similarity_scores_children) + child1_similarity_score_sum + child2_similarity_score_sum) / self.n_users
         
         return self.average_jaccard
 
@@ -145,13 +198,26 @@ class AnomalyGroup:
         Pi_g = 3 * RT_g * PT_g * NT_g
         return Pi_g    
 
-def get_overall_anomaly_score(users: list, group_anomaly_compactness: float, use_metadata: bool, avrd: np.array = None, burstness: np.array = None):
+def get_overall_anomaly_score(group: AnomalyGroup, use_metadata: bool, avrd: np.array = None, burstness: np.array = None):
+    """
+    Generates overall anomaly score for a group of users.
+    3 * group_anomaly_compactness + group_mean_avrd + group_mean_burstness
+
+    INPUTS:
+        group: AnomalyGroup object
+        use_metadata (bool): boolean indicating whether to use metadata (avrd and burstness)
+        avrd (array): average rating deviation for all users in dataset
+        burstness (array): burstness for all users in dataset
+
+    OUTPUTS:
+        score (float): overall anomaly score for the group
+    """
     if use_metadata:
-        group_mean_avrd = np.mean(avrd[users])
-        group_mean_burstness = np.mean(burstness[users])
-        score = 3 * group_anomaly_compactness + group_mean_avrd + group_mean_burstness
+        group_mean_avrd = np.mean(avrd[group.users])
+        group_mean_burstness = np.mean(burstness[group.users])
+        score = 3 * group.group_anomaly_compactness + group_mean_avrd + group_mean_burstness
     else:
-        score = group_anomaly_compactness
+        score = 3 * group.group_anomaly_compactness
     return score
 
 
@@ -197,15 +263,15 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
 
     for user in range(dataset.n_users):
         group = AnomalyGroup.make_single_user_group(user, user_simi)
-        score = get_overall_anomaly_score(group.users, group.group_anomaly_compactness(), use_metadata, avrd, burstness)
+        score = get_overall_anomaly_score(group, use_metadata, avrd, burstness)
         anomaly_scores[user] = score
         groups.append(group)
  
     for i, row in enumerate(linkage_matrix):
-        child1 = row[0]
-        child2 = row[1]
+        child1 = int(row[0])
+        child2 = int(row[1])
         group = AnomalyGroup.make_group_from_children(groups[child1], groups[child2], user_simi)
-        score = get_overall_anomaly_score(group.users, group.group_anomaly_compactness(), use_metadata, avrd, burstness)
+        score = get_overall_anomaly_score(group, use_metadata, avrd, burstness)
         anomaly_scores[i + dataset.n_users] = score
         groups.append(group)
 
