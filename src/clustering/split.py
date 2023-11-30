@@ -20,10 +20,14 @@ def split_matrix_random(matrix, approx_group_sizes = 0, num_groups = 0):
     shuffled_indices = np.random.permutation(rows)
 
     if approx_group_sizes != 0:
-        num_groups = math.ceil(rows / approx_group_sizes)
 
         if num_groups != 0:
-            raise ValueError("approx_group_sizes and num_groups cannot both be 0")
+            raise ValueError("approx_group_sizes and num_groups cannot both be non-zero")
+     
+        num_groups = math.ceil(rows / approx_group_sizes)
+   
+    elif num_groups == 0:
+        raise ValueError("approx_group_sizes and num_groups cannot both be zero")
     
     group_size = matrix.shape[0] // num_groups
     
