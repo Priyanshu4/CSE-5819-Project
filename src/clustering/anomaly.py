@@ -243,11 +243,7 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
         product_average_ratings = avg_ratings.values 
         graph_u2i = dataset.graph_u2i.toarray()
         rating_matrix = dataset.rated_graph_u2i.toarray()
-        print(f"Product avg ratings shape: {product_average_ratings.shape}")
-        print(f"Graph u2i shape: {graph_u2i.shape}")
-        print(f"Rating matrix shape: {rating_matrix.shape}")
         average_ratings_matrix = np.tile(product_average_ratings, (dataset.n_users, 1))
-        print(f"Avg ratings matrix shape: {average_ratings_matrix.shape}")
         diff_matrix = (rating_matrix - average_ratings_matrix) * graph_u2i
         sum_of_diffs = np.sum(np.abs(diff_matrix), axis=1)
         num_rated_products = np.sum(graph_u2i, axis=1)
