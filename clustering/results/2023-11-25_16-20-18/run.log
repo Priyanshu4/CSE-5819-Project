@@ -1,6 +1,0 @@
-2023-11-25 16:20:18,133 - INFO - Running with data: small
-2023-11-25 16:20:18,134 - INFO - generating linkage matrix
-2023-11-25 16:20:18,135 - INFO - 0.0014939308166503906 seconds to create linkage matrix
-2023-11-25 16:20:18,135 - INFO - File 'results/2023-11-25_16-20-18/linkage' has been successfully written.
-2023-11-25 16:20:21,826 - INFO - 3.5729551315307617 seconds to find all leaves
-2023-11-25 16:20:21,828 - INFO - File 'results/2023-11-25_16-20-18/leaves' has been successfully written.
