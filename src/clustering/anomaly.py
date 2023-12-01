@@ -201,92 +201,92 @@ class AnomalyGroup:
         NT_g = self._neighbor_tightness()
         Pi_g = 3 * RT_g * PT_g * NT_g
         return Pi_g    
+    
 
-def get_overall_anomaly_score(group: AnomalyGroup, enable_penalty: bool, use_metadata: bool, avrd: np.array = None, burstness: np.array = None):
-    """
-    Generates overall anomaly score for a group of users.
-    3 * group_anomaly_compactness + group_mean_avrd + group_mean_burstness
+class AnomalyScorer:
 
-    INPUTS:
-        group: AnomalyGroup object
-        enable_penalty (bool): boolean indicating whether to enable penalty for smaller groups
-        use_metadata (bool): boolean indicating whether to use metadata (avrd and burstness)
-        avrd (array): average rating deviation for all users in dataset
-        burstness (array): burstness for all users in dataset
+    def __init__(self, dataset: BasicDataset, enable_penalty: bool, use_metadata: bool = True, burstness_threshold: int = 0.5):
+        self.dataset = dataset
+        self.enable_penalty = enable_penalty
+        self.use_metadata = use_metadata
+        self.burstness_threshold = burstness_threshold
+        self.user_simi = UserSimilarity(dataset.graph_u2i)
 
-    OUTPUTS:
-        score (float): overall anomaly score for the group
-    """
-    if use_metadata:
-        group_mean_avrd = np.mean(avrd[group.users])
-        group_mean_burstness = np.mean(burstness[group.users])
-        score = 3 * group.group_anomaly_compactness(enable_penalty) + group_mean_avrd + group_mean_burstness
-    else:
-        score = 3 * group.group_anomaly_compactness(enable_penalty)
-    return score
+        if use_metadata:
+            self.avg_ratings = dataset.metadata_df.groupby(dataset.METADATA_ITEM_ID)[dataset.METADATA_STAR_RATING].mean()
+            self.product_average_ratings = self.avg_ratings.values 
+            self.graph_u2i = dataset.graph_u2i.toarray()
+            self.rating_matrix = dataset.rated_graph_u2i.toarray()
+            self.average_ratings_matrix = np.tile(self.product_average_ratings, (dataset.n_users, 1))
+            self.diff_matrix = (self.rating_matrix - self.average_ratings_matrix) * self.graph_u2i
+            self.sum_of_diffs = np.sum(np.abs(self.diff_matrix), axis=1)
+            self.num_rated_products = np.sum(self.graph_u2i, axis=1)
+            self.avrd = np.where(self.num_rated_products != 0, self.sum_of_diffs / self.num_rated_products, 0)
 
+            self.first_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].min()
+            self.last_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].max()
+            self.review_periods = (self.last_date-self.first_date).dt.days
+            self.burstness = np.where(self.review_periods < self.burstness_threshold, 1 - self.review_periods / self.burstness_threshold, 0)
 
-def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, enable_penalty: bool, use_metadata: bool = True, burstness_threshold: int = 0.5):
-    """
-    Generates anomaly scores for each group in the hierarchical clustering linkage matrix.
+        else:
+            self.avrd = None
+            self.burstness = None
 
-    INPUTS:
-        linkage_matrix: linkage matrix from scipy hierarchical clustering
-        dataset: BasicDataset object
-        enable_penalty: boolean indicating whether to enable penalty for smaller groups
-        use_metadata: boolean indicating whether to use metadata
-        burstness_threshold: threshold for burstness in days
+    def get_anomaly_score(self, group: list | AnomalyGroup):
+        """
+        Generates overall anomaly score for a group of users.
+        3 * group_anomaly_compactness + group_mean_avrd + group_mean_burstness
 
-    OUTPUTS:
-        groups: list of AnomalyGroup objects
-        children: list of tuples of children for each group in the linkage matrix
-        anomaly_scores: list of anomaly scores for each group in the linkage matrix
-    """
+        INPUTS:
+            group: AnomalyGroup object
 
-    user_simi = UserSimilarity(dataset.graph_u2i)
-
-    if use_metadata:
-        avg_ratings = dataset.metadata_df.groupby(dataset.METADATA_ITEM_ID)[dataset.METADATA_STAR_RATING].mean()
-        product_average_ratings = avg_ratings.values 
-        graph_u2i = dataset.graph_u2i.toarray()
-        rating_matrix = dataset.rated_graph_u2i.toarray()
-        average_ratings_matrix = np.tile(product_average_ratings, (dataset.n_users, 1))
-        diff_matrix = (rating_matrix - average_ratings_matrix) * graph_u2i
-        sum_of_diffs = np.sum(np.abs(diff_matrix), axis=1)
-        num_rated_products = np.sum(graph_u2i, axis=1)
-        avrd = np.where(num_rated_products != 0, sum_of_diffs / num_rated_products, 0)
+        OUTPUTS:
+            score (float): overall anomaly score for the group
+        """
+        if isinstance(group, list):
+            group = AnomalyGroup.make_group(group, self.user_simi) 
+        if self.use_metadata:
+            group_mean_avrd = np.mean(self.avrd[group.users])
+            group_mean_burstness = np.mean(self.burstness[group.users])
+            score = 3 * group.group_anomaly_compactness(self.enable_penalty) + group_mean_avrd + group_mean_burstness
+        else:
+            score = 3 * group.group_anomaly_compactness(self.enable_penalty)
+        return score
 
 
-        first_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].min()
-        last_date = dataset.metadata_df.groupby(dataset.METADATA_USER_ID)[dataset.METADATA_DATE].max()
-        review_periods = (last_date-first_date).dt.days
-        burstness = np.where(review_periods < burstness_threshold, 1 - review_periods / burstness_threshold, 0)
+    def hierarchical_anomaly_scores(self, linkage_matrix):
+        """
+        Generates anomaly scores for each group in the hierarchical clustering linkage matrix.
 
-    else:
-        avrd = None
-        burstness = None
+        INPUTS:
+            linkage_matrix: linkage matrix from scipy hierarchical clustering
 
-    groups = []
-    children = []
-    anomaly_scores = np.zeros(dataset.n_users + len(linkage_matrix), dtype=float)
+        OUTPUTS:
+            groups: list of AnomalyGroup objects
+            children: list of tuples of children for each group in the linkage matrix
+            anomaly_scores: list of anomaly scores for each group in the linkage matrix
+        """
+        groups = []
+        children = []
+        anomaly_scores = np.zeros(self.dataset.n_users + len(linkage_matrix), dtype=float)
 
-    for user in range(dataset.n_users):
-        group = AnomalyGroup.make_single_user_group(user, user_simi)
-        score = get_overall_anomaly_score(group, enable_penalty, use_metadata, avrd, burstness)
-        anomaly_scores[user] = score
-        groups.append(group)
-        children.append((None, None))
- 
-    for i, row in enumerate(linkage_matrix):
-        child1 = int(row[0])
-        child2 = int(row[1])
-        children.append((child1, child2))
-        group = AnomalyGroup.make_group_from_children(groups[child1], groups[child2], user_simi)
-        score = get_overall_anomaly_score(group, enable_penalty, use_metadata, avrd, burstness)
-        anomaly_scores[i + dataset.n_users] = score
-        groups.append(group)
+        for user in range(self.dataset.n_users):
+            group = AnomalyGroup.make_single_user_group(user, self.user_simi)
+            score = self.get_anomaly_score(group)
+            anomaly_scores[user] = score
+            groups.append(group)
+            children.append((None, None))
+    
+        for i, row in enumerate(linkage_matrix):
+            child1 = int(row[0])
+            child2 = int(row[1])
+            children.append((child1, child2))
+            group = AnomalyGroup.make_group_from_children(groups[child1], groups[child2], self.user_simi)
+            score = self.get_anomaly_score(group)
+            anomaly_scores[i + self.dataset.n_users] = score
+            groups.append(group)
 
-    return groups, children, anomaly_scores
+        return groups, children, anomaly_scores
 
 
 

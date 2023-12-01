@@ -116,7 +116,7 @@ def hierarchical_clust_anomaly_fraud_detection(clusters, children, anomaly_score
                 # Mark as fraud, but do add users to the predicted labels
                 # We use fraud_clusters to say that parents can be fraud if and only if their children are fraud
                 fraud_clusters[i] = 1
-            elif (fraud_clusters[child1] == 1) or (fraud_clusters[child2] == 1):
+            elif (fraud_clusters[child1] == 1) and (fraud_clusters[child2] == 1):
                 min_child_score = min(anomaly_scores[child1], anomaly_scores[child2])
                 if score > max_allowed_drop * min_child_score:
                     fraud_clusters[i] = 1

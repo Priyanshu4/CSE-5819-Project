@@ -23,7 +23,7 @@ from src.embedding import training
 from src.visualization.embvis import save_embeddings_plot
 
 from src.clustering.hclust import HClust
-from src.clustering.anomaly import hierarchical_anomaly_scores
+from src.clustering.anomaly import AnomalyScorer
 from src.clustering import split
 
 from src.testing.dbscan import test_optics_dbscan_fraud_detection, log_dbscan_results
@@ -116,8 +116,10 @@ def clustering_main(args, dataset, user_embs, logger):
 
         all_groups = []
         all_anomaly_scores = []
-
         splits = []
+
+        use_metadata = (type(dataset) == YelpNycDataset)
+        anomaly_scorer = AnomalyScorer(dataset, enable_penalty=False, use_metadata=use_metadata, burstness_threshold=args.tau)
 
         for i, group in enumerate(groups):
             
@@ -127,8 +129,7 @@ def clustering_main(args, dataset, user_embs, logger):
 
             # Generate anomaly scores
             with utils.timer(name="anomaly_scores"):
-                use_metadata = (type(dataset) == YelpNycDataset)
-                groups, children, anomaly_scores = hierarchical_anomaly_scores(linkage, dataset, enable_penalty=False, use_metadata=use_metadata, burstness_threshold=args.tau)
+                groups, children, anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage)
                 groups = [g.users for g in groups]
                 splits.append((groups, children, anomaly_scores))
 
@@ -140,8 +141,9 @@ def clustering_main(args, dataset, user_embs, logger):
         scale_factor = 1 / np.max(all_anomaly_scores)
         scaled_anomaly_scores = all_anomaly_scores / np.max(all_anomaly_scores)
         logger.info(f"Anomaly scores scaled by {scale_factor}.")
+        logger.info(str(scaled_anomaly_scores))
         thresholds = list(np.linspace(0, 1, 21))
-        max_drops = [0.1, 0.2, 0.3, 0.4, 0.5]
+        max_drops = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         min_size=20
         results = test_hierarchical_clust_anomaly_fraud_detection(clusters, children, scaled_anomaly_scores, thresholds, min_size, max_drops, dataset.user_labels)
         log_hierarchical_clust_anomaly_results(results, logger)
