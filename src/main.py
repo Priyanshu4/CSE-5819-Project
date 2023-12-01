@@ -27,7 +27,9 @@ from src.clustering.anomaly import hierarchical_anomaly_scores
 from src.clustering import split
 
 from src.testing.dbscan import test_optics_dbscan_fraud_detection, log_dbscan_results
-from src.testing.clust_anomaly import test_clust_anomaly_fraud_detection, log_clust_anomaly_results
+from src.testing.clust_anomaly import (test_clust_anomaly_fraud_detection, log_clust_anomaly_results, 
+                                       merge_hierarchical_splits, test_hierarchical_clust_anomaly_fraud_detection, log_hierarchical_clust_anomaly_results)
+
 
 def embedding_main(args, dataset, logger):
     """ Main code for the lightgcn training and embedding generation.
@@ -115,6 +117,8 @@ def clustering_main(args, dataset, user_embs, logger):
         all_groups = []
         all_anomaly_scores = []
 
+        splits = []
+
         for i, group in enumerate(groups):
             
             with utils.timer(name="linkages"):
@@ -124,22 +128,23 @@ def clustering_main(args, dataset, user_embs, logger):
             # Generate anomaly scores
             with utils.timer(name="anomaly_scores"):
                 use_metadata = (type(dataset) == YelpNycDataset)
-                groups, anomaly_scores = hierarchical_anomaly_scores(linkage, dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
-                all_groups.extend(groups)
-                all_anomaly_scores.append(anomaly_scores)
+                groups, children, anomaly_scores = hierarchical_anomaly_scores(linkage, dataset, enable_penalty=False, use_metadata=use_metadata, burstness_threshold=args.tau)
+                groups = [g.users for g in groups]
+                splits.append((groups, children, anomaly_scores))
 
         time_info = utils.timer.formatted_tape_str(select_keys=["linkages", "anomaly_scores"])
         logger.info(f"Clustering Time: {time_info}")
         utils.timer.zero(select_keys=["linkages", "anomaly_scores"])
 
-        all_anomaly_scores = np.concatenate(all_anomaly_scores)
+        clusters, children, all_anomaly_scores = merge_hierarchical_splits(splits)
         scale_factor = 1 / np.max(all_anomaly_scores)
         scaled_anomaly_scores = all_anomaly_scores / np.max(all_anomaly_scores)
         logger.info(f"Anomaly scores scaled by {scale_factor}.")
-        thresholds = list(np.linspace(0, 1, 0.05))
-        clusters = [group.users for group in all_groups]
-        results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
-        log_clust_anomaly_results(thresholds, results, best, logger)
+        thresholds = list(np.linspace(0, 1, 21))
+        max_drops = [0.1, 0.2, 0.3, 0.4, 0.5]
+        min_size=20
+        results = test_hierarchical_clust_anomaly_fraud_detection(clusters, children, scaled_anomaly_scores, thresholds, min_size, max_drops, dataset.user_labels)
+        log_hierarchical_clust_anomaly_results(results, logger)
 
     if args.clustering == "dbscan":
         logger.info("Clustering with DBSCAN for density based fraud detection.")

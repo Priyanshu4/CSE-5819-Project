@@ -239,6 +239,7 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, enable_pe
 
     OUTPUTS:
         groups: list of AnomalyGroup objects
+        children: list of tuples of children for each group in the linkage matrix
         anomaly_scores: list of anomaly scores for each group in the linkage matrix
     """
 
@@ -266,6 +267,7 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, enable_pe
         burstness = None
 
     groups = []
+    children = []
     anomaly_scores = np.zeros(dataset.n_users + len(linkage_matrix), dtype=float)
 
     for user in range(dataset.n_users):
@@ -273,16 +275,18 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, enable_pe
         score = get_overall_anomaly_score(group, enable_penalty, use_metadata, avrd, burstness)
         anomaly_scores[user] = score
         groups.append(group)
+        children.append((None, None))
  
     for i, row in enumerate(linkage_matrix):
         child1 = int(row[0])
         child2 = int(row[1])
+        children.append((child1, child2))
         group = AnomalyGroup.make_group_from_children(groups[child1], groups[child2], user_simi)
         score = get_overall_anomaly_score(group, enable_penalty, use_metadata, avrd, burstness)
         anomaly_scores[i + dataset.n_users] = score
         groups.append(group)
 
-    return groups, anomaly_scores
+    return groups, children, anomaly_scores
 
 
 

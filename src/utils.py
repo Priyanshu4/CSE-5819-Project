@@ -24,6 +24,20 @@ def sparse_matrix_to_tensor(X) -> torch.sparse_coo_tensor:
     data = torch.FloatTensor(coo.data)
     return torch.sparse_coo_tensor(index, data, torch.Size(coo.shape))
 
+def flatten_list(list_of_lists: list) -> list:
+    """
+    Flatten a list of lists into a single list.
+    
+    Arguments:
+        list_of_lists: A list of lists
+        
+    Returns:
+        flat_list: A flattened list
+    """
+    flat_list = []
+    return map(flat_list.extend, list_of_lists)
+
+
 class StreamToLogger:
     """
     Fake file-like stream object that redirects writes to a logger instance.

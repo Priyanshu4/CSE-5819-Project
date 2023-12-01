@@ -6,7 +6,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=priyanshu.agrawal+hpc@uconn.edu      
 #SBATCH --mem=16G
-#SBATCH --job-name=lgcn_adam_100ep_8d_cpu
+#SBATCH --job-name=yelpnyc_dbscan_500ep_8d_cpu
 
 module purge
 
@@ -16,4 +16,4 @@ conda activate fake-review-detection
 
 cd ..
 
-python -m src.main --name adam_100ep_8d_cpu --dataset yelpnyc --loss simi --optimizer adam --epochs 100 --dim 8 --clustering dbscan
+python -m src.main --name yelpnyc_dbscan_500ep_8d --dataset yelpnyc --loss simi --optimizer adam --epochs 500 --dim 8 --clustering dbscan
