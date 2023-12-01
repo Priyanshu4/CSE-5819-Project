@@ -181,30 +181,35 @@ class AnomalyGroup:
         NT_g = self._average_jaccard() * self.penalty
         return NT_g
     
-    def group_anomaly_compactness(self):
+    def group_anomaly_compactness(self, enable_penalty: bool = False):
         """
         Generates group anomaly compactness for a group of users.
 
         INPUTS:
             group (arr) - list of users in the group
+            enable_penalty (bool) - boolean indicating whether to enable penalty for smaller groups
 
         OUTPUTS:
             Pi_g (float) - group anomaly compactness for the group
         """
-        self._penalty_function()
+        if enable_penalty:
+            self._penalty_function()
+        else:
+            self.penalty = 1
         RT_g = self._review_tightness()
         PT_g = self._product_tightness()
         NT_g = self._neighbor_tightness()
         Pi_g = 3 * RT_g * PT_g * NT_g
         return Pi_g    
 
-def get_overall_anomaly_score(group: AnomalyGroup, use_metadata: bool, avrd: np.array = None, burstness: np.array = None):
+def get_overall_anomaly_score(group: AnomalyGroup, enable_penalty: bool, use_metadata: bool, avrd: np.array = None, burstness: np.array = None):
     """
     Generates overall anomaly score for a group of users.
     3 * group_anomaly_compactness + group_mean_avrd + group_mean_burstness
 
     INPUTS:
         group: AnomalyGroup object
+        enable_penalty (bool): boolean indicating whether to enable penalty for smaller groups
         use_metadata (bool): boolean indicating whether to use metadata (avrd and burstness)
         avrd (array): average rating deviation for all users in dataset
         burstness (array): burstness for all users in dataset
@@ -215,19 +220,20 @@ def get_overall_anomaly_score(group: AnomalyGroup, use_metadata: bool, avrd: np.
     if use_metadata:
         group_mean_avrd = np.mean(avrd[group.users])
         group_mean_burstness = np.mean(burstness[group.users])
-        score = 3 * group.group_anomaly_compactness() + group_mean_avrd + group_mean_burstness
+        score = 3 * group.group_anomaly_compactness(enable_penalty) + group_mean_avrd + group_mean_burstness
     else:
-        score = 3 * group.group_anomaly_compactness()
+        score = 3 * group.group_anomaly_compactness(enable_penalty)
     return score
 
 
-def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metadata: bool = True, burstness_threshold: int = 0.5):
+def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, enable_penalty: bool, use_metadata: bool = True, burstness_threshold: int = 0.5):
     """
     Generates anomaly scores for each group in the hierarchical clustering linkage matrix.
 
     INPUTS:
         linkage_matrix: linkage matrix from scipy hierarchical clustering
         dataset: BasicDataset object
+        enable_penalty: boolean indicating whether to enable penalty for smaller groups
         use_metadata: boolean indicating whether to use metadata
         burstness_threshold: threshold for burstness in days
 
@@ -264,7 +270,7 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
 
     for user in range(dataset.n_users):
         group = AnomalyGroup.make_single_user_group(user, user_simi)
-        score = get_overall_anomaly_score(group, use_metadata, avrd, burstness)
+        score = get_overall_anomaly_score(group, enable_penalty, use_metadata, avrd, burstness)
         anomaly_scores[user] = score
         groups.append(group)
  
@@ -272,7 +278,7 @@ def hierarchical_anomaly_scores(linkage_matrix, dataset: BasicDataset, use_metad
         child1 = int(row[0])
         child2 = int(row[1])
         group = AnomalyGroup.make_group_from_children(groups[child1], groups[child2], user_simi)
-        score = get_overall_anomaly_score(group, use_metadata, avrd, burstness)
+        score = get_overall_anomaly_score(group, enable_penalty, use_metadata, avrd, burstness)
         anomaly_scores[i + dataset.n_users] = score
         groups.append(group)
 

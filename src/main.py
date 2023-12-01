@@ -124,7 +124,7 @@ def clustering_main(args, dataset, user_embs, logger):
             # Generate anomaly scores
             with utils.timer(name="anomaly_scores"):
                 use_metadata = (type(dataset) == YelpNycDataset)
-                groups, anomaly_scores = hierarchical_anomaly_scores(linkage, dataset, use_metadata=use_metadata, burstness_threshold=args.tau)
+                groups, anomaly_scores = hierarchical_anomaly_scores(linkage, dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
                 all_groups.extend(groups)
                 all_anomaly_scores.append(anomaly_scores)
 
@@ -136,7 +136,7 @@ def clustering_main(args, dataset, user_embs, logger):
         scale_factor = 1 / np.max(all_anomaly_scores)
         scaled_anomaly_scores = all_anomaly_scores / np.max(all_anomaly_scores)
         logger.info(f"Anomaly scores scaled by {scale_factor}.")
-        thresholds = [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        thresholds = list(np.linspace(0, 1, 0.05))
         clusters = [group.users for group in all_groups]
         results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
         log_clust_anomaly_results(thresholds, results, best, logger)
