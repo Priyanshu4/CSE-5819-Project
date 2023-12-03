@@ -12,7 +12,7 @@ module purge
 
 source /home/pra20003/miniconda3/etc/profile.d/conda.sh
 
-conda activate fake-review-detection
+conda activate fake-review-group-detection
 
 cd ..
 

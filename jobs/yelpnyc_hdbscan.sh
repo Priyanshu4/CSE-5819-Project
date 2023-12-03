@@ -6,7 +6,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=priyanshu.agrawal+hpc@uconn.edu      
 #SBATCH --mem=16G
-#SBATCH --job-name=hclust
+#SBATCH --job-name=yelpnyc_8d_hdbscan
 
 module purge
 
@@ -16,4 +16,4 @@ conda activate fake-review-group-detection
 
 cd ..
 
-python -m src.main --name hclust_test1 --dataset synthetic_easy_1000 --loss simi --optimizer adam --epochs 1 --dim 4 --clustering hclust
+python -m src.main --name yelpnyc_8d_hdbscan --dataset yelpnyc --loss simi --optimizer adam --epochs 100 --dim 8 --clustering hdbscan
