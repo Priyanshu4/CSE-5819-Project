@@ -119,7 +119,7 @@ def clustering_main(args, dataset, user_embs, logger):
         splits = []
 
         use_metadata = (type(dataset) == YelpNycDataset)
-        anomaly_scorer = AnomalyScorer(dataset, enable_penalty=False, use_metadata=use_metadata, burstness_threshold=args.tau)
+        anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
 
         for i, group in enumerate(groups):
             
@@ -140,13 +140,23 @@ def clustering_main(args, dataset, user_embs, logger):
         clusters, children, all_anomaly_scores = merge_hierarchical_splits(splits)
         scale_factor = 1 / np.max(all_anomaly_scores)
         scaled_anomaly_scores = all_anomaly_scores / np.max(all_anomaly_scores)
+
         logger.info(f"Anomaly scores scaled by {scale_factor}.")
-        logger.info(str(scaled_anomaly_scores))
+        logger.info("Anomaly score statistics:")
+        logger.info(f"\tmin={np.min(scaled_anomaly_scores)}")
+        logger.info(f"\tmax={np.max(scaled_anomaly_scores)}")
+        logger.info(f"\tmean={np.mean(scaled_anomaly_scores)}")
+        logger.info(f"\tmedian={np.median(scaled_anomaly_scores)}")
+        logger.info(f"\tstd={np.std(scaled_anomaly_scores)}")
+
         thresholds = list(np.linspace(0, 1, 21))
-        max_drops = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+        max_drops = [0, 0.01, 0.05, 0.1, 0.2, 0.3]
+        max_drops = [0]
         min_size=20
-        results = test_hierarchical_clust_anomaly_fraud_detection(clusters, children, scaled_anomaly_scores, thresholds, min_size, max_drops, dataset.user_labels)
-        log_hierarchical_clust_anomaly_results(results, logger)
+        #results = test_hierarchical_clust_anomaly_fraud_detection(clusters, children, scaled_anomaly_scores, thresholds, min_size, max_drops, dataset.user_labels)
+        results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
+        #log_hierarchical_clust_anomaly_results(results, logger)
+        log_clust_anomaly_results(thresholds, results, best, logger)
 
     if args.clustering == "dbscan":
         logger.info("Clustering with DBSCAN for density based fraud detection.")

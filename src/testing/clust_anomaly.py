@@ -118,6 +118,7 @@ def hierarchical_clust_anomaly_fraud_detection(clusters, children, anomaly_score
                 fraud_clusters[i] = 1
             elif (fraud_clusters[child1] == 1) and (fraud_clusters[child2] == 1):
                 min_child_score = min(anomaly_scores[child1], anomaly_scores[child2])
+                #print(score, max_allowed_drop * min_child_score, len(clusters[i]), min_size)
                 if score > max_allowed_drop * min_child_score:
                     fraud_clusters[i] = 1
                     if len(clusters[i]) >= min_size:
@@ -199,7 +200,7 @@ def log_results(results, headers, dict_keys, format_strings, logger: logging.Log
     """
     results_table = []
     for result in results:
-        result_dict = {}
+        result_dict = dict()
         for i, key in enumerate(dict_keys):
             result_dict[key] = format_strings[i].format(result[key])
         results_table.append(result_dict)

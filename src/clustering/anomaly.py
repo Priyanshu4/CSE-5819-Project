@@ -164,10 +164,10 @@ class AnomalyGroup:
             for j in self.child2.users
         ]
 
-        child1_similarity_score_sum = self.child1.average_jaccard * self.child1.n_users
-        child2_similarity_score_sum = self.child2.average_jaccard * self.child2.n_users
+        child1_similarity_score_sum = self.child1.average_jaccard * self.child1.n_users**2
+        child2_similarity_score_sum = self.child2.average_jaccard * self.child2.n_users**2
 
-        self.average_jaccard = (2 * sum(similarity_scores_children) + child1_similarity_score_sum + child2_similarity_score_sum) / self.n_users
+        self.average_jaccard = (2 * sum(similarity_scores_children) + child1_similarity_score_sum + child2_similarity_score_sum) / self.n_users**2
         
         return self.average_jaccard
 
@@ -285,7 +285,7 @@ class AnomalyScorer:
             score = self.get_anomaly_score(group)
             anomaly_scores[i + self.dataset.n_users] = score
             groups.append(group)
-
+            
         return groups, children, anomaly_scores
 
 

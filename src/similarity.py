@@ -50,7 +50,7 @@ class UserSimilarity:
         intersection_count = intersection.count()
 
         if union_count == 0:
-            return 0
+            return 1
         
         return intersection_count / union_count
 
