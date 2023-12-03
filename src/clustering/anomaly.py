@@ -280,7 +280,7 @@ class AnomalyScorer:
         if isinstance(group, list):
             group = AnomalyGroup.make_group(group, self.user_simi) 
         if self.use_metadata:
-            group_mean_avrd = np.mean(self.avrd[group.users])
+            group_mean_avrd = np.mean(self.avrd[group.users]) / 5 # divide by 5 to normalize (max 5 star rating difference)
             group_mean_burstness = np.mean(self.burstness[group.users])
             score = 3 * group.group_anomaly_compactness(self.enable_penalty) + group_mean_avrd + group_mean_burstness
         else:
@@ -339,14 +339,8 @@ class AnomalyScorer:
 
         # Preallocate groups and anomaly_scores to size of number of groups
         ngroups = len(parent_groups) + self.dataset.n_users
-        print("N Groups: ", ngroups)
-        print("N Users: ", self.dataset.n_users)
-
         groups = [None] * ngroups
         anomaly_scores = np.zeros(ngroups, dtype=float)
-
-        sorted_grouped_df = pd.concat([group for _, group in parent_groups])
-        print(sorted_grouped_df)
 
         # Initialize single user groups
         for user in range(self.dataset.n_users):
@@ -361,10 +355,6 @@ class AnomalyScorer:
             children = group['child'].values
             child_groups = [groups[child] for child in children]
             if None in child_groups:
-                print("Parent: ", parent)
-                for child in children:
-                    if groups[child] is None:
-                        print(child)
                 raise RuntimeError("condensed_tree_df is not in the expected format. Please check the documentation for the condensed_tree_df argument.\n" +
                                    "We expect the condensed_tree_df to contain a row for each parent-child pair.\n" +
                                    "The parent column should not contain any values less than dataset.n_users. Parent at dataset.n_users is the root of all nodes.\n")

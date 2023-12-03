@@ -16,4 +16,4 @@ conda activate fake-review-group-detection
 
 cd ..
 
-python -m src.main --name yelpnyc_8d_hclust --dataset yelpnyc --loss simi --optimizer adam --epochs 100 --dim 8 --clustering hclust
+python -m src.main --name yelpnyc_8d_hclust --dataset yelpnyc --embedding results/yelpnyc_8d.pkl --clustering hclust
