@@ -7,12 +7,12 @@ import logging
 from .metrics import evaluate_predictions
 import src.utils as utils
 
-def clust_anomaly_fraud_detection(all_clusters, anomaly_scores, threshold: float, true_labels: np.array):
+def clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold: float, true_labels: np.array):
     """
     Detects fraud users using a list of candidate clusters and their anomaly scores.
 
     Arguments:
-        all_clusters (list): A list of lists of users (indices) in each cluster.
+        clusters (list): A list of lists of users (indices) in each cluster.
         anomaly_scores (np.ndarray): An array of anomaly scores for each cluster.
         threshold (float): The threshold for the anomaly score to be considered as fraud.
         true_labels (np.ndarray): The true labels of the dataset, where 1 is fraud and 0 is not fraud.
@@ -23,15 +23,15 @@ def clust_anomaly_fraud_detection(all_clusters, anomaly_scores, threshold: float
     predicted_labels = np.zeros(len(true_labels))
     for i, score in enumerate(anomaly_scores):
         if score > threshold:
-            predicted_labels[all_clusters[i]] = 1
+            predicted_labels[clusters[i]] = 1
     return predicted_labels
 
-def test_clust_anomaly_fraud_detection(all_clusters, anomaly_scores, threshold_values: list, true_labels: np.ndarray):
+def test_clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold_values: list, true_labels: np.ndarray):
     """
     Tests the clust_anomaly_fraud_detection function over a series of threshold values.
 
     Arguments:
-        all_clusters (list): A list of lists of users (indices) in each cluster.
+        clusters (list): A list of lists of users (indices) in each cluster.
         anomaly_scores (np.ndarray): An array of anomaly scores for each cluster.
         threshold_values (list): A list of threshold values to test.
         true_labels (np.ndarray): The true labels of the dataset, where 1 is fraud and 0 is not fraud.
@@ -44,7 +44,7 @@ def test_clust_anomaly_fraud_detection(all_clusters, anomaly_scores, threshold_v
     best_threshold = -1
     best_f1 = -1
     for i, threshold in enumerate(threshold_values):
-        predicted_labels = clust_anomaly_fraud_detection(all_clusters, anomaly_scores, threshold, true_labels)
+        predicted_labels = clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold, true_labels)
         result = evaluate_predictions(true_labels, predicted_labels)
         if result['f1_score'] > best_f1:
             best_f1 = result['f1_score']

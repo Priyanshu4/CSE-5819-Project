@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from src.dataloader import BasicDataset
 from src.similarity import UserSimilarity
 from bitarray import bitarray
@@ -23,6 +24,9 @@ class AnomalyGroup:
         self.user_simi = user_simi
         self.child1 = child1
         self.child2 = child2
+
+        self.penalty = None
+        self.average_jaccard = None
 
     @staticmethod
     def make_group_from_children(child1: 'AnomalyGroup', child2: 'AnomalyGroup', user_simi: UserSimilarity) -> 'AnomalyGroup':
@@ -54,6 +58,31 @@ class AnomalyGroup:
 
         return group
     
+    @staticmethod
+    def make_group_from_many_children(children: list['AnomalyGroup'], user_simi: UserSimilarity) -> 'AnomalyGroup':
+        """
+        Makes an anomaly group object from many child anomaly groups.
+        Internally uses make_group_from_children() to merge two groups at a time.
+        Recursively merges two halves of the list of children until there is only one group left.
+
+        INPUTS:
+            children (list[AnomalyGroup]) - list of AnomalyGroup objects
+            user_simi (UserSimilarity) - UserSimilarity object
+        
+        OUTPUTS:
+            group (AnomalyGroup) - AnomalyGroup object
+        """
+        if len(children) == 1:
+            return children[0]
+        elif len(children) == 2:
+            return AnomalyGroup.make_group_from_children(children[0], children[1], user_simi)
+        else:
+            return AnomalyGroup.make_group_from_children(
+                AnomalyGroup.make_group_from_many_children(children[:len(children) // 2], user_simi),
+                AnomalyGroup.make_group_from_many_children(children[len(children) // 2:], user_simi),
+                user_simi
+            )
+        
     @staticmethod
     def make_single_user_group(user: int, user_simi: UserSimilarity) -> 'AnomalyGroup':
         """
@@ -163,6 +192,11 @@ class AnomalyGroup:
             for i in self.child1.users
             for j in self.child2.users
         ]
+
+        if self.child1.average_jaccard is None:
+            self.child1._average_jaccard()
+        if self.child2.average_jaccard is None:
+            self.child2._average_jaccard()
 
         child1_similarity_score_sum = self.child1.average_jaccard * self.child1.n_users**2
         child2_similarity_score_sum = self.child2.average_jaccard * self.child2.n_users**2
@@ -287,6 +321,62 @@ class AnomalyScorer:
             groups.append(group)
             
         return groups, children, anomaly_scores
+    
+    def hdbscan_tree_anomaly_scores(self, condensed_tree_df: pd.DataFrame):
+        """
+        Generates anomaly scores for each group in the HDBSCAN condensed tree.
+        
+        INPUTS:
+            condensed_tree_df: condensed tree from HDBSCAN as pandas dataframe.
+                               See https://hdbscan.readthedocs.io/en/latest/api.html
+
+        OUTPUTS:
+            groups: list of AnomalyGroup objects
+            anomaly_scores: np array of anomaly scores for each group in the condensed tree            
+        """
+        # Group dataframe by parent column and sort parents by indices.
+        parent_groups = condensed_tree_df.sort_values('parent', ascending=False).groupby('parent', sort=False)
+
+        # Preallocate groups and anomaly_scores to size of number of groups
+        ngroups = len(parent_groups) + self.dataset.n_users
+        print("N Groups: ", ngroups)
+        print("N Users: ", self.dataset.n_users)
+
+        groups = [None] * ngroups
+        anomaly_scores = np.zeros(ngroups, dtype=float)
+
+        sorted_grouped_df = pd.concat([group for _, group in parent_groups])
+        print(sorted_grouped_df)
+
+        # Initialize single user groups
+        for user in range(self.dataset.n_users):
+            group = AnomalyGroup.make_single_user_group(user, self.user_simi)
+            score = self.get_anomaly_score(group)
+            anomaly_scores[user] = score
+            groups[user] = group
+
+        # Iterate through parent groups
+        for parent, group in parent_groups:
+
+            children = group['child'].values
+            child_groups = [groups[child] for child in children]
+            if None in child_groups:
+                print("Parent: ", parent)
+                for child in children:
+                    if groups[child] is None:
+                        print(child)
+                raise RuntimeError("condensed_tree_df is not in the expected format. Please check the documentation for the condensed_tree_df argument.\n" +
+                                   "We expect the condensed_tree_df to contain a row for each parent-child pair.\n" +
+                                   "The parent column should not contain any values less than dataset.n_users. Parent at dataset.n_users is the root of all nodes.\n")
+            group = AnomalyGroup.make_group_from_many_children(child_groups, self.user_simi)
+            score = self.get_anomaly_score(group)
+            anomaly_scores[parent] = score
+            groups[parent] = group
+
+        return groups, anomaly_scores
+
+
+
 
 
 

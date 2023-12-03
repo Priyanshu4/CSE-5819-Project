@@ -31,4 +31,5 @@ def save_embeddings_plot(embeddings: np.array, labels: np.array, path: Path):
                 labels=['Genuine', 'Fraud'])
 
     plt.savefig(path)
+    plt.clf()
   

@@ -6,6 +6,9 @@ import json
 import numpy as np
 import logging
 import sys
+import seaborn as sns   
+import matplotlib.pyplot as plt
+import hdbscan
 
 # Absolute imports only work if ran from the root directory
 cwd = Path.cwd()
@@ -96,7 +99,7 @@ def embedding_main(args, dataset, logger):
 
     return user_embs.detach().cpu().numpy()
 
-def clustering_main(args, dataset, user_embs, logger):
+def clustering_main(args, dataset, user_embs, results_path, logger):
     """ Main code for the clustering.
     """
     if args.clustering == "none":
@@ -105,6 +108,35 @@ def clustering_main(args, dataset, user_embs, logger):
 
     n_users, n_features = user_embs.shape
     logger.info(f"Clustering {n_users} users with {n_features} features.")
+
+    if args.clustering == "hdbscan":
+        logger.info("Clustering with HDBSCAN for hieararchical with density and anomaly score based fraud detection.")
+        min_cluster_size = 20
+        hdbscan_clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
+        hdbscan_clusterer.fit(user_embs)
+        hdbscan_clusterer.condensed_tree_.plot(select_clusters=True, selection_palette=sns.color_palette('deep', 8))
+        plt.savefig(results_path / "hdbscan_tree.png")
+        plt.close()
+        use_metadata = (type(dataset) == YelpNycDataset) # Only the YelpNYC dataset has metadata avaiable
+        anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
+        groups, anomaly_scores = anomaly_scorer.hdbscan_tree_anomaly_scores(hdbscan_clusterer.condensed_tree_.to_pandas())
+        clusters = [g.users for g in groups]
+        
+        scale_factor = 1 / np.max(anomaly_scores)
+        scaled_anomaly_scores = anomaly_scores / np.max(anomaly_scores)
+
+        logger.info(f"Anomaly scores scaled by {scale_factor}.")
+        logger.info("Anomaly score statistics:")
+        logger.info(f"\tmin={np.min(scaled_anomaly_scores)}")
+        logger.info(f"\tmax={np.max(scaled_anomaly_scores)}")
+        logger.info(f"\tmean={np.mean(scaled_anomaly_scores)}")
+        logger.info(f"\tmedian={np.median(scaled_anomaly_scores)}")
+        logger.info(f"\tstd={np.std(scaled_anomaly_scores)}")
+
+        thresholds = list(np.linspace(0, 1, 21))     
+        results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
+        log_clust_anomaly_results(thresholds, results, best, logger)
+
 
     if args.clustering == "hclust" or args.clustering == "hclust2":
         logger.info("Clustering with hierarchical clustering and anomaly scores for fraud detection.")
@@ -200,7 +232,7 @@ if __name__ == "__main__":
     parser.set_defaults(fast_simi=True)
 
     # Arguments for clustering
-    parser.add_argument("--clustering", type=str, default="hclust", help="The clustering algorithm to use. Options: hclust, dbscan, none")
+    parser.add_argument("--clustering", type=str, default="hclust", help="The clustering algorithm to use. Options: hclust, hdbscan, dbscan, none")
     parser.add_argument("--tau", type=float, default=0, help="The threshold for burstness in anomaly score computation.")
  
     args = parser.parse_args()
@@ -237,7 +269,7 @@ if __name__ == "__main__":
     save_embeddings_plot(user_embs, dataset.user_labels, embeddings_plot_save_file)
     logger.info(f"Saved embeddings plot to {embeddings_plot_save_file}")
 
-    clustering_main(args, dataset, user_embs, logger)
+    clustering_main(args, dataset, user_embs, results_path, logger)
 
     
 
