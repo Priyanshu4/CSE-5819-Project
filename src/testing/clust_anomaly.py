@@ -157,36 +157,6 @@ def test_hierarchical_clust_anomaly_fraud_detection(clusters, children, anomaly_
             result['max_allowed_drop'] = max_allowed_drop
             results.append(result)
     return results
-
-def merge_hierarchical_splits(splits):
-    """
-    Merges the results of multiple splits of the hierarchical clustering algorithm.
-    
-    Arguments:
-        splits (list): A list of splits.
-                       Each split should be a list or tuple containing (clusters (list), children (list of pairs), anomaly_scores (list)).
-
-    Returns:
-        clusters (list): A list of lists of users (indices) in each cluster.
-                         The list should be ordered such that the last cluster is the root cluster and the first cluster is the first in the linkage matrix.
-                         In format outputted by src.clustering.anomaly.hierarchical_anomaly_scores
-        children (list): A list of tuples (pairs) of children clusters for each cluster.
-        anomaly_scores (np.ndarray): An array of anomaly scores for each cluster.
-    """
-    all_clusters = []
-    all_children = []
-    all_anomaly_scores = []
-    counter = 0
-    for split in splits:
-        clusters, childrens, anomaly_scores = split[0], split[1], split[2]
-        all_clusters.extend(clusters)
-        all_anomaly_scores.extend(anomaly_scores)
-        for children in childrens:
-            if children[0] is not None and children[1] is not None:
-                children = (children[0] + counter, children[1] + counter)
-            all_children.append(children)
-        counter += len(clusters)
-    return all_clusters, all_children, np.array(all_anomaly_scores)
         
 def log_results(results, headers, dict_keys, format_strings, logger: logging.Logger):
     """

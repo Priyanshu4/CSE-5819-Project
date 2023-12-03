@@ -28,7 +28,7 @@ from src.clustering import split
 
 from src.testing.dbscan import test_optics_dbscan_fraud_detection, log_dbscan_results
 from src.testing.clust_anomaly import (test_clust_anomaly_fraud_detection, log_clust_anomaly_results, 
-                                       merge_hierarchical_splits, test_hierarchical_clust_anomaly_fraud_detection, log_hierarchical_clust_anomaly_results)
+                                       test_hierarchical_clust_anomaly_fraud_detection, log_hierarchical_clust_anomaly_results)
 
 
 def embedding_main(args, dataset, logger):
@@ -106,7 +106,7 @@ def clustering_main(args, dataset, user_embs, logger):
     n_users, n_features = user_embs.shape
     logger.info(f"Clustering {n_users} users with {n_features} features.")
 
-    if args.clustering == "hclust":
+    if args.clustering == "hclust" or args.clustering == "hclust2":
         logger.info("Clustering with hierarchical clustering and anomaly scores for fraud detection.")
         if n_users > 60000:
             logger.warning(f"Splitting {n_users} into groups with max size 60000.")
@@ -118,8 +118,9 @@ def clustering_main(args, dataset, user_embs, logger):
         all_anomaly_scores = []
         splits = []
 
-        use_metadata = (type(dataset) == YelpNycDataset)
-        anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
+        use_metadata = (type(dataset) == YelpNycDataset) # Only the YelpNYC dataset has metadata avaiable
+        enable_penalty = (args.clustering == "hclust")   # Only enable penalty for hclust not hclust2
+        anomaly_scorer = AnomalyScorer(dataset, enable_penalty=enable_penalty, use_metadata=use_metadata, burstness_threshold=args.tau)
 
         for i, group in enumerate(groups):
             
@@ -137,7 +138,7 @@ def clustering_main(args, dataset, user_embs, logger):
         logger.info(f"Clustering Time: {time_info}")
         utils.timer.zero(select_keys=["linkages", "anomaly_scores"])
 
-        clusters, children, all_anomaly_scores = merge_hierarchical_splits(splits)
+        clusters, children, all_anomaly_scores = split.merge_hierarchical_splits(splits)
         scale_factor = 1 / np.max(all_anomaly_scores)
         scaled_anomaly_scores = all_anomaly_scores / np.max(all_anomaly_scores)
 
@@ -150,13 +151,15 @@ def clustering_main(args, dataset, user_embs, logger):
         logger.info(f"\tstd={np.std(scaled_anomaly_scores)}")
 
         thresholds = list(np.linspace(0, 1, 21))
-        max_drops = [0, 0.01, 0.05, 0.1, 0.2, 0.3]
-        max_drops = [0]
-        min_size=20
-        #results = test_hierarchical_clust_anomaly_fraud_detection(clusters, children, scaled_anomaly_scores, thresholds, min_size, max_drops, dataset.user_labels)
-        results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
-        #log_hierarchical_clust_anomaly_results(results, logger)
-        log_clust_anomaly_results(thresholds, results, best, logger)
+
+        if args.clustering == "hclust":
+            results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
+            log_clust_anomaly_results(thresholds, results, best, logger)
+        elif args.clustering == "hclust2":
+            max_drops = [0, 0.01, 0.05, 0.1, 0.2, 0.3]
+            min_size=20
+            results = test_hierarchical_clust_anomaly_fraud_detection(clusters, children, scaled_anomaly_scores, thresholds, min_size, max_drops, dataset.user_labels)
+            log_hierarchical_clust_anomaly_results(results, logger)
 
     if args.clustering == "dbscan":
         logger.info("Clustering with DBSCAN for density based fraud detection.")
