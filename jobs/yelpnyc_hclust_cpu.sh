@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=priyanshu.agrawal+hpc@uconn.edu      
-#SBATCH --mem=16G
+#SBATCH --mem=80G
 #SBATCH --job-name=yelpnyc_8d_hclust
 
 module purge

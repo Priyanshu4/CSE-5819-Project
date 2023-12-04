@@ -111,7 +111,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
 
     if args.clustering in ("hdbscan", "hclust", "hclust2"):
 
-        use_metadata = (type(dataset) == YelpNycDataset) # Only the YelpNYC dataset has metadata avaiable
+        use_metadata = args.metadata and (type(dataset) == YelpNycDataset) # Only the YelpNYC dataset has metadata avaiable
 
         if args.clustering == "hdbscan":
             logger.info("Clustering with HDBSCAN for hieararchical with density and anomaly score based fraud detection.")
@@ -141,8 +141,6 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             else:
                 groups, group_indices = split.split_matrix_random(user_embs, num_groups=1)
 
-            all_groups = []
-            all_anomaly_scores = []
             splits = []
 
             use_metadata = (type(dataset) == YelpNycDataset) # Only the YelpNYC dataset has metadata avaiable
@@ -227,9 +225,10 @@ if __name__ == "__main__":
     parser.add_argument("--no_fast_simi", action="store_false", dest="fast_simi", help="disable fast sampling for simi loss")
     parser.set_defaults(fast_simi=True)
 
-    # Arguments for clustering
+    # Arguments for clustering and anomaly scores
     parser.add_argument("--clustering", type=str, default="hclust", help="The clustering algorithm to use. Options: hclust, hdbscan, dbscan, none")
-    parser.add_argument("--tau", type=float, default=0, help="The threshold for burstness in anomaly score computation.")
+    parser.add_argument("--no_metadata", action="store_false", dest="metadata", help="Do not use metadata in anomaly score computation.")
+    parser.add_argument("--tau", type=float, default=30, help="The threshold for burstness for anomaly score computation in units of days.")
  
     args = parser.parse_args()
 

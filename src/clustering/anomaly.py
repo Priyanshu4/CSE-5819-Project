@@ -239,7 +239,16 @@ class AnomalyGroup:
 
 class AnomalyScorer:
 
-    def __init__(self, dataset: BasicDataset, enable_penalty: bool, use_metadata: bool = True, burstness_threshold: int = 0.5):
+    def __init__(self, dataset: BasicDataset, enable_penalty: bool, use_metadata: bool = True, burstness_threshold: int = 30):
+        """
+        Initializes AnomalyScorer object.
+        
+        INPUTS:
+            dataset (BasicDataset) - BasicDataset object
+            enable_penalty (bool) - boolean indicating whether to enable penalty for smaller groups
+            use_metadata (bool) - boolean indicating whether to use metadata for anomaly scoring
+            burstness_threshold (int) - minimum number of days user must be active for to have 0 burstness score
+        """
         self.dataset = dataset
         self.enable_penalty = enable_penalty
         self.use_metadata = use_metadata
