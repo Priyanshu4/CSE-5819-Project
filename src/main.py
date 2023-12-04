@@ -109,7 +109,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
     n_users, n_features = user_embs.shape
     logger.info(f"Clustering {n_users} users with {n_features} features.")
 
-    if args.clustering in ("hdbscan", "hclust", "hclust2"):
+    if args.clustering in ("hdbscan", "hclust"):
 
         use_metadata = args.metadata and (type(dataset) == YelpNycDataset) # Only the YelpNYC dataset has metadata avaiable
         logger.info(f"use_metadata: {use_metadata}")
@@ -121,20 +121,24 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
                 min_cluster_size = 100
                 hdbscan_clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
                 hdbscan_clusterer.fit(user_embs)
-            hdbscan_clusterer.condensed_tree_.plot(select_clusters=True, selection_palette=sns.color_palette('deep', 8))
-            plt.savefig(results_path / "hdbscan_tree.png")
-            plt.close()
+
+            with utils.timer(name="plotting"):
+                hdbscan_clusterer.condensed_tree_.plot(select_clusters=True, selection_palette=sns.color_palette('deep', 8))
+                plt.savefig(results_path / "hdbscan_tree.png")
+                plt.close()
 
             with utils.timer(name="anomaly_scores"):
                 anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
                 groups, anomaly_scores = anomaly_scorer.hdbscan_tree_anomaly_scores(hdbscan_clusterer.condensed_tree_.to_pandas())
+
+            with utils.timer(name="group_mapping"):
                 clusters = [g.users for g in groups]
 
-            time_info = utils.timer.formatted_tape_str(select_keys=["clustering", "anomaly_scores"])
+            time_info = utils.timer.formatted_tape_str(select_keys=["clustering", "plotting", "anomaly_scores", "group_mapping"])
             logger.info(f"HDBSCAN Time: {time_info}")
-            utils.timer.zero(select_keys=["clustering", "anomaly_scores"])
+            utils.timer.zero(select_keys=["clustering", "plotting", "anomaly_scores", "group_mapping"])
 
-        elif args.clustering == "hclust" or args.clustering == "hclust2":
+        elif args.clustering == "hclust":
             logger.info("Clustering with hierarchical clustering and anomaly scores for fraud detection.")
         
             max_group_size = 60000
@@ -142,31 +146,27 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             mappings = split.build_group_split_mappings(split_groups, group_indices)
             logger.info(f"Split {n_users} into {len(split_groups)} with max size {max_group_size}.")
 
-            splits = []
-
             enable_penalty = (args.clustering == "hclust")   # Only enable penalty for hclust not hclust2
             anomaly_scorer = AnomalyScorer(dataset, enable_penalty=enable_penalty, use_metadata=use_metadata, burstness_threshold=args.tau)
 
+            clusters = []
+            anomaly_scores = []
+
             for i, group in enumerate(split_groups):
 
-                group_mapping = mappings[i]
-                
                 with utils.timer(name="linkages"):
                     hclust = HClust(group)
                     linkage = hclust.generate_linkage_matrix()
-                
+
                 # Generate anomaly scores
                 with utils.timer(name="anomaly_scores"):
-                    groups, children, anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage)
-                    groups = [list(map(group_mapping.get, g.users)) for g in groups]
-                    children = [(group_mapping.get(c1), group_mapping.get(c2)) for c1, c2 in children]
-                    splits.append((groups, children, anomaly_scores))
+                    group_clusters, group_anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage, mappings[i])
+                    clusters.extend(g.users for g in group_clusters)
+                    anomaly_scores.extend(group_anomaly_scores)
 
             time_info = utils.timer.formatted_tape_str(select_keys=["linkages", "anomaly_scores"])
             logger.info(f"Clustering Time: {time_info}")
             utils.timer.zero(select_keys=["linkages", "anomaly_scores"])
-
-            clusters, children, anomaly_scores = split.merge_hierarchical_splits(splits)
 
         scale_factor = 1 / np.max(anomaly_scores)
         scaled_anomaly_scores = anomaly_scores / np.max(anomaly_scores)
@@ -181,14 +181,8 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
 
         thresholds = list(np.linspace(0, 0.9, 9, endpoint=False)) + list(np.linspace(0.9, 0.99, 9, endpoint=False)) + list(np.linspace(0.99, 1, 11))     
 
-        if args.clustering in ("hclust", "hdbscan"):
-            results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
-            log_clust_anomaly_results(thresholds, results, best, logger)
-        elif args.clustering == "hclust2":
-            max_drops = [0, 0.01, 0.05, 0.1, 0.2, 0.3]
-            min_size=20
-            results = test_hierarchical_clust_anomaly_fraud_detection(clusters, children, scaled_anomaly_scores, thresholds, min_size, max_drops, dataset.user_labels)
-            log_hierarchical_clust_anomaly_results(results, logger)
+        results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
+        log_clust_anomaly_results(thresholds, results, best, logger)
 
     elif args.clustering == "dbscan":
         logger.info("Clustering with DBSCAN for density based fraud detection.")

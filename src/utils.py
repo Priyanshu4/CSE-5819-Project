@@ -154,6 +154,17 @@ class timer:
         else:
             self.tape.append(timer.time() - self.start)
 
+class IdentityMap:
+    """
+    A map that returns the key as the value.
+    """
+
+    def __init__(self):
+        pass
+
+    def __getitem__(self, key):
+        return key
+
 def print_table(headers: list, data: list, print_func = print):
     """
     Print a table with the first column left-justified and the remaining columns right-justified.

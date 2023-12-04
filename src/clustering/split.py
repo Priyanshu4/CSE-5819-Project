@@ -104,6 +104,29 @@ def build_group_split_mappings(groups, group_indices):
         group_mappings.append(build_group_mapping(groups[i], group_indices[i]))
     return group_mappings
 
+def merge_splits_after_clustering(groups, group_indices, clusters):
+    """
+    Merges splits of a dataset after clustering has been applied seperately to each split.
+
+    Arguments:
+        groups (list) - list of group matrices
+        group_indices (list) - list of indices of the rows in the original matrix that are in each group 
+        clusters (list) - list of list of clusters in each group, where each cluster is a list of users (indices in the group matrix)
+
+    Returns:
+        all_clusters (list) - list of list of users (indices) in each cluster
+    """
+    # Build group mappings from indices in the group matrix to indices in the original matrix
+    group_mappings = build_group_split_mappings(groups, group_indices)
+
+    all_clusters = []
+    for group in range(len(clusters)):
+        for cluster in clusters[group]:
+            all_clusters.append([group_mappings[group][user] for user in cluster])
+
+    return all_clusters
+
+
 def merge_hierarchical_splits(splits):
     """
     Merges the results of multiple splits of the hierarchical clustering algorithm.

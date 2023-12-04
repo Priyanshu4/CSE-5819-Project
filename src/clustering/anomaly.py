@@ -4,6 +4,8 @@ from src.dataloader import BasicDataset
 from src.similarity import UserSimilarity
 from bitarray import bitarray
 
+import src.utils as utils
+
 
 class AnomalyGroup:
 
@@ -278,7 +280,6 @@ class AnomalyScorer:
     def get_anomaly_score(self, group: list | AnomalyGroup):
         """
         Generates overall anomaly score for a group of users.
-        3 * group_anomaly_compactness + group_mean_avrd + group_mean_burstness
 
         INPUTS:
             group: AnomalyGroup object
@@ -299,39 +300,43 @@ class AnomalyScorer:
         return score
 
 
-    def hierarchical_anomaly_scores(self, linkage_matrix):
+    def hierarchical_anomaly_scores(self, linkage_matrix, group_mapping: dict = None):
         """
         Generates anomaly scores for each group in the hierarchical clustering linkage matrix.
 
         INPUTS:
             linkage_matrix: linkage matrix from scipy hierarchical clustering
+            group_mapping: dictionary mapping indices in the linkage matrix to indices in the original dataset
 
         OUTPUTS:
             groups: list of AnomalyGroup objects
-            children: list of tuples of children for each group in the linkage matrix
             anomaly_scores: list of anomaly scores for each group in the linkage matrix
         """
-        groups = []
-        children = []
-        anomaly_scores = np.zeros(self.dataset.n_users + len(linkage_matrix), dtype=float)
+        if group_mapping is None:
+            group_mapping = utils.IdentityMap()
+            n_users = self.dataset.n_users
+        else:
+            n_users = len(group_mapping.keys())
 
-        for user in range(self.dataset.n_users):
+        groups = []
+        anomaly_scores = np.zeros(n_users + len(linkage_matrix), dtype=float)
+
+        for i in range(n_users):
+            user = group_mapping[i]
             group = AnomalyGroup.make_single_user_group(user, self.user_simi)
             score = self.get_anomaly_score(group)
-            anomaly_scores[user] = score
+            anomaly_scores[i] = score
             groups.append(group)
-            children.append((None, None))
     
         for i, row in enumerate(linkage_matrix):
             child1 = int(row[0])
             child2 = int(row[1])
-            children.append((child1, child2))
             group = AnomalyGroup.make_group_from_children(groups[child1], groups[child2], self.user_simi)
             score = self.get_anomaly_score(group)
-            anomaly_scores[i + self.dataset.n_users] = score
+            anomaly_scores[i + n_users] = score
             groups.append(group)
             
-        return groups, children, anomaly_scores
+        return groups, anomaly_scores
     
     def hdbscan_tree_anomaly_scores(self, condensed_tree_df: pd.DataFrame):
         """
@@ -346,33 +351,43 @@ class AnomalyScorer:
             anomaly_scores: np array of anomaly scores for each group in the condensed tree            
         """
         # Group dataframe by parent column and sort parents by indices.
-        parent_groups = condensed_tree_df.sort_values('parent', ascending=False).groupby('parent', sort=False)
+        with utils.timer(name="sorting and grouping"):
+            parent_groups = condensed_tree_df.sort_values('parent', ascending=False).groupby('parent', sort=False)
 
         # Preallocate groups and anomaly_scores to size of number of groups
-        ngroups = len(parent_groups) + self.dataset.n_users
-        groups = [None] * ngroups
-        anomaly_scores = np.zeros(ngroups, dtype=float)
+        with utils.timer(name="preallocating"):
+            ngroups = len(parent_groups) + self.dataset.n_users
+            groups = [None] * ngroups
+            anomaly_scores = np.zeros(ngroups, dtype=float)
 
         # Initialize single user groups
-        for user in range(self.dataset.n_users):
-            group = AnomalyGroup.make_single_user_group(user, self.user_simi)
-            score = self.get_anomaly_score(group)
-            anomaly_scores[user] = score
-            groups[user] = group
+        with utils.timer(name="initializing single user groups"):
+            for user in range(self.dataset.n_users):
+                group = AnomalyGroup.make_single_user_group(user, self.user_simi)
+                score = self.get_anomaly_score(group)
+                anomaly_scores[user] = score
+                groups[user] = group
 
         # Iterate through parent groups
         for parent, group in parent_groups:
 
-            children = group['child'].values
-            child_groups = [groups[child] for child in children]
-            if None in child_groups:
-                raise RuntimeError("condensed_tree_df is not in the expected format. Please check the documentation for the condensed_tree_df argument.\n" +
-                                   "We expect the condensed_tree_df to contain a row for each parent-child pair.\n" +
-                                   "The parent column should not contain any values less than dataset.n_users. Parent at dataset.n_users is the root of all nodes.\n")
-            group = AnomalyGroup.make_group_from_many_children(child_groups, self.user_simi)
-            score = self.get_anomaly_score(group)
-            anomaly_scores[parent] = score
-            groups[parent] = group
+            with utils.timer(name="aggregating children"):
+                children = group['child'].values
+                child_groups = [groups[child] for child in children]
+                if None in child_groups:
+                    raise RuntimeError("condensed_tree_df is not in the expected format. Please check the documentation for the condensed_tree_df argument.\n" +
+                                    "We expect the condensed_tree_df to contain a row for each parent-child pair.\n" +
+                                    "The parent column should not contain any values less than dataset.n_users. Parent at dataset.n_users is the root of all nodes.\n")
+                
+            with utils.timer(name="making group"):
+                group = AnomalyGroup.make_group_from_many_children(child_groups, self.user_simi)
+
+            with utils.timer(name="computing score"):
+                score = self.get_anomaly_score(group)
+                anomaly_scores[parent] = score
+                groups[parent] = group
+
+        print(utils.timer.formatted_tape_str(select_keys=["sorting and grouping", "preallocating", "initializing single user groups", "aggregating children", "making group", "computing score"]))
 
         return groups, anomaly_scores
 
@@ -392,5 +407,3 @@ class AnomalyScorer:
         Computes the weighted arithmetic mean of the scores.
         """
         return np.sum(scores * weights) / np.sum(weights)
-
-        

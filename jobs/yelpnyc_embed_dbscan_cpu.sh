@@ -12,8 +12,8 @@ module purge
 
 source /home/pra20003/miniconda3/etc/profile.d/conda.sh
 
-conda activate fake-review-detection
+conda activate fake-review-group-detection
 
 cd ..
 
-python -m src.main --name yelpnyc_dbscan_500ep_8d --dataset yelpnyc --loss simi --optimizer adam --epochs 500 --dim 8 --clustering dbscan
+python -m src.main --name yelpnyc_dbscan_500ep_8d --dataset yelpnyc --loss simi --optimizer adam --epochs 500 --dim 8 --clustering dbscan --a_fold 10
