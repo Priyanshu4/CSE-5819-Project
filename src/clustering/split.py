@@ -1,13 +1,14 @@
 import numpy as np
+from sklearn.cluster import KMeans
 import math
 
-def split_matrix_random(matrix, approx_group_sizes = 0, num_groups = 0):
+def split_matrix_random(matrix, max_group_size = 0, num_groups = 0):
     """
     Splits a matrix row-wise into a given number of random groups.
 
     Arguments:
         matrix (np.ndarray) - matrix to split
-        approx_group_sizes (int) - approximate size of each group
+        max_group_size (int) - max size of a group
             if passed, num_groups is ignored, num_groups is set to ceil(matrix.shape[0] / approx_group_sizes)
         num_groups (int) - number of groups to split the matrix into
 
@@ -19,12 +20,12 @@ def split_matrix_random(matrix, approx_group_sizes = 0, num_groups = 0):
 
     shuffled_indices = np.random.permutation(rows)
 
-    if approx_group_sizes != 0:
+    if max_group_size != 0:
 
         if num_groups != 0:
             raise ValueError("approx_group_sizes and num_groups cannot both be non-zero")
      
-        num_groups = math.ceil(rows / approx_group_sizes)
+        num_groups = math.ceil(rows / max_group_size)
    
     elif num_groups == 0:
         raise ValueError("approx_group_sizes and num_groups cannot both be zero")
@@ -41,6 +42,43 @@ def split_matrix_random(matrix, approx_group_sizes = 0, num_groups = 0):
             group_indices.append(shuffled_indices[i * group_size:(i + 1) * group_size])
         group = matrix[group_indices[i]]
         groups.append(group)
+
+    return groups, group_indices
+
+
+def split_matrix_kmeans(matrix, num_groups, max_group_size = 60000, trials = 10):
+    """
+    Splits an embeddings matrix row-wise into a given number of groups using k-means clustering.
+
+    Arguments:
+        matrix (np.ndarray) - matrix to split
+        num_groups (int) - number of groups to split the matrix into
+        max_group_size (int) - maximum size of each group
+        trials (int) - number of trials to run k-means clustering to get groups < max_group_size.
+                       If the groups are still too large after trials, we use split_matrix_random to split the groups.
+    Returns:
+        groups (list) - list of groups 
+        group_indices (list) - list of indices of the rows in the original matrix that are in each group 
+    """
+    def _split_matrix_kmeans(matrix, num_groups):
+        kmeans = KMeans(n_clusters=num_groups, random_state=0).fit(matrix)
+        labels = kmeans.labels_
+
+        groups = []
+        group_indices = []
+        for i in range(num_groups):
+            group_indices.append(np.where(labels == i)[0])
+            group = matrix[group_indices[i]]
+            groups.append(group)
+
+        return groups, group_indices
+
+    for i in range(trials):
+        groups, group_indices = _split_matrix_kmeans(matrix, num_groups)
+        if max([len(group) for group in groups]) <= max_group_size:
+            break
+    else:
+        groups, group_indices = split_matrix_random(matrix, approx_group_sizes = max_group_size)
 
     return groups, group_indices
 

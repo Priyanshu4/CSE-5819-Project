@@ -112,6 +112,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
     if args.clustering in ("hdbscan", "hclust", "hclust2"):
 
         use_metadata = args.metadata and (type(dataset) == YelpNycDataset) # Only the YelpNYC dataset has metadata avaiable
+        logger.info(f"use_metadata: {use_metadata}")
 
         if args.clustering == "hdbscan":
             logger.info("Clustering with HDBSCAN for hieararchical with density and anomaly score based fraud detection.")
@@ -135,19 +136,17 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
 
         elif args.clustering == "hclust" or args.clustering == "hclust2":
             logger.info("Clustering with hierarchical clustering and anomaly scores for fraud detection.")
-            if n_users > 60000:
-                logger.warning(f"Splitting {n_users} into groups with max size 60000.")
-                groups, group_indices = split.split_matrix_random(user_embs, approx_group_sizes=60000)
-            else:
-                groups, group_indices = split.split_matrix_random(user_embs, num_groups=1)
+        
+            max_group_size = 200000
+            split_groups, group_indices = split.split_matrix_random(user_embs, max_group_size=max_group_size)
+            logger.info(f"Split {n_users} into {len(split_groups)} with max size {max_group_size}.")
 
             splits = []
 
-            use_metadata = (type(dataset) == YelpNycDataset) # Only the YelpNYC dataset has metadata avaiable
             enable_penalty = (args.clustering == "hclust")   # Only enable penalty for hclust not hclust2
             anomaly_scorer = AnomalyScorer(dataset, enable_penalty=enable_penalty, use_metadata=use_metadata, burstness_threshold=args.tau)
 
-            for i, group in enumerate(groups):
+            for i, group in enumerate(split_groups):
                 
                 with utils.timer(name="linkages"):
                     hclust = HClust(group)
