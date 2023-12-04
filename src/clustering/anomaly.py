@@ -4,6 +4,7 @@ from src.dataloader import BasicDataset
 from src.similarity import UserSimilarity
 from bitarray import bitarray
 
+
 class AnomalyGroup:
 
     def __init__(self, 
@@ -233,9 +234,8 @@ class AnomalyGroup:
         RT_g = self._review_tightness()
         PT_g = self._product_tightness()
         NT_g = self._neighbor_tightness()
-        Pi_g = 3 * RT_g * PT_g * NT_g
+        Pi_g = AnomalyScorer.weighted_geometric_mean(np.array([RT_g, PT_g, NT_g]), np.array([1/3, 1/3, 1/3]))
         return Pi_g    
-    
 
 class AnomalyScorer:
 
@@ -291,9 +291,11 @@ class AnomalyScorer:
         if self.use_metadata:
             group_mean_avrd = np.mean(self.avrd[group.users]) / 5 # divide by 5 to normalize (max 5 star rating difference)
             group_mean_burstness = np.mean(self.burstness[group.users])
-            score = 3 * group.group_anomaly_compactness(self.enable_penalty) + group_mean_avrd + group_mean_burstness
+            score = AnomalyScorer.weighted_geometric_mean(
+                np.array([group.group_anomaly_compactness(self.enable_penalty), group_mean_avrd, group_mean_burstness]), 
+                np.array([4/5, 1/10, 1/10]))
         else:
-            score = 3 * group.group_anomaly_compactness(self.enable_penalty)
+            score = group.group_anomaly_compactness(self.enable_penalty)
         return score
 
 
@@ -375,8 +377,20 @@ class AnomalyScorer:
         return groups, anomaly_scores
 
 
+    @staticmethod
+    def weighted_geometric_mean(scores: np.ndarray, weights: np.ndarray):
+        """
+        Computes the weighted geometric mean of the scores.
+        """
+        if np.any(scores == 0.0):
+            return 0
+        return np.exp(AnomalyScorer.weighted_arithmetic_mean(np.log(scores), weights))
 
-
-
+    @staticmethod
+    def weighted_arithmetic_mean(scores: np.ndarray, weights: np.ndarray):
+        """
+        Computes the weighted arithmetic mean of the scores.
+        """
+        return np.sum(scores * weights) / np.sum(weights)
 
         

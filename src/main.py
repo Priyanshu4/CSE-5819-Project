@@ -137,8 +137,9 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
         elif args.clustering == "hclust" or args.clustering == "hclust2":
             logger.info("Clustering with hierarchical clustering and anomaly scores for fraud detection.")
         
-            max_group_size = 200000
-            split_groups, group_indices = split.split_matrix_random(user_embs, max_group_size=max_group_size)
+            max_group_size = 60000
+            split_groups, group_indices = split.split_matrix_kmeans(user_embs, max_group_size=max_group_size)
+            mappings = split.build_group_split_mappings(split_groups, group_indices)
             logger.info(f"Split {n_users} into {len(split_groups)} with max size {max_group_size}.")
 
             splits = []
@@ -147,15 +148,18 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             anomaly_scorer = AnomalyScorer(dataset, enable_penalty=enable_penalty, use_metadata=use_metadata, burstness_threshold=args.tau)
 
             for i, group in enumerate(split_groups):
+
+                group_mapping = mappings[i]
                 
                 with utils.timer(name="linkages"):
                     hclust = HClust(group)
                     linkage = hclust.generate_linkage_matrix()
-
+                
                 # Generate anomaly scores
                 with utils.timer(name="anomaly_scores"):
                     groups, children, anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage)
-                    groups = [g.users for g in groups]
+                    groups = [list(map(group_mapping.get, g.users)) for g in groups]
+                    children = [(group_mapping.get(c1), group_mapping.get(c2)) for c1, c2 in children]
                     splits.append((groups, children, anomaly_scores))
 
             time_info = utils.timer.formatted_tape_str(select_keys=["linkages", "anomaly_scores"])

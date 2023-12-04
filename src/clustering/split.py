@@ -13,7 +13,7 @@ def split_matrix_random(matrix, max_group_size = 0, num_groups = 0):
         num_groups (int) - number of groups to split the matrix into
 
     Returns:
-        groups (list) - list of groups 
+        groups (list) - list of group matrices
         group_indices (list) - list of indices of the rows in the original matrix that are in each group 
     """
     rows, columns = matrix.shape
@@ -46,7 +46,7 @@ def split_matrix_random(matrix, max_group_size = 0, num_groups = 0):
     return groups, group_indices
 
 
-def split_matrix_kmeans(matrix, num_groups, max_group_size = 60000, trials = 10):
+def split_matrix_kmeans(matrix, num_groups = 0, max_group_size = 0, trials = 10):
     """
     Splits an embeddings matrix row-wise into a given number of groups using k-means clustering.
 
@@ -55,13 +55,14 @@ def split_matrix_kmeans(matrix, num_groups, max_group_size = 60000, trials = 10)
         num_groups (int) - number of groups to split the matrix into
         max_group_size (int) - maximum size of each group
         trials (int) - number of trials to run k-means clustering to get groups < max_group_size.
+                       Each trial, number of groups increased by 1.
                        If the groups are still too large after trials, we use split_matrix_random to split the groups.
     Returns:
-        groups (list) - list of groups 
+        groups (list) - list of group matrices
         group_indices (list) - list of indices of the rows in the original matrix that are in each group 
     """
     def _split_matrix_kmeans(matrix, num_groups):
-        kmeans = KMeans(n_clusters=num_groups, random_state=0).fit(matrix)
+        kmeans = KMeans(n_clusters=num_groups, n_init="auto").fit(matrix)
         labels = kmeans.labels_
 
         groups = []
@@ -72,16 +73,36 @@ def split_matrix_kmeans(matrix, num_groups, max_group_size = 60000, trials = 10)
             groups.append(group)
 
         return groups, group_indices
+    
+    if num_groups == 0:
+        num_groups = math.ceil(matrix.shape[0] / max_group_size)
 
     for i in range(trials):
-        groups, group_indices = _split_matrix_kmeans(matrix, num_groups)
+        groups, group_indices = _split_matrix_kmeans(matrix, num_groups+i)
         if max([len(group) for group in groups]) <= max_group_size:
             break
     else:
-        groups, group_indices = split_matrix_random(matrix, approx_group_sizes = max_group_size)
+        groups, group_indices = split_matrix_random(matrix, max_group_size = max_group_size)
 
     return groups, group_indices
 
+
+def build_group_mapping(group, indices):
+    """ Builds a mapping from index of a user in a group to the indices of the rows in the original matrix that are in the group.
+        Returns a dictionary.
+    """
+    group_mapping = {i: indices[i] for i in range(len(group))}
+    return group_mapping
+
+def build_group_split_mappings(groups, group_indices):
+    """ Builds all mappings for a group split.
+        Mappings are from index of a user in a group to the indices of the rows in the original matrix that are in the group.
+        Returns a list of dictionaries.
+    """
+    group_mappings = []
+    for i in range(len(groups)):
+        group_mappings.append(build_group_mapping(groups[i], group_indices[i]))
+    return group_mappings
 
 def merge_hierarchical_splits(splits):
     """
