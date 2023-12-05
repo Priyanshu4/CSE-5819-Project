@@ -69,6 +69,8 @@ class AnomalyGroup:
 
         In recursive mode, this recursively merges two halves of the list of children until there is only one group left.
         In iterative mode, this repeateadly takes two children and merges them into one until there is only one group left.
+        Iterative mode also computes Jaccard Similarity for children now, while recursive will do it only when group_anomaly_compactness is called.
+        Recursive is generally faster and is the default option.
 
         INPUTS:
             children (list[AnomalyGroup]) - list of AnomalyGroup objects
@@ -98,8 +100,8 @@ class AnomalyGroup:
             return AnomalyGroup.make_group_from_children(children[0], children[1], user_simi)
         else:
             return AnomalyGroup.make_group_from_children(
-                AnomalyGroup.make_group_from_many_children(children[:len(children) // 2], user_simi, recursive),
-                AnomalyGroup.make_group_from_many_children(children[len(children) // 2:], user_simi, recursive),
+                AnomalyGroup._make_group_from_many_children_recursive(children[:len(children) // 2], user_simi),
+                AnomalyGroup._make_group_from_many_children_recursive(children[len(children) // 2:], user_simi),
                 user_simi
             )        
      
@@ -255,10 +257,14 @@ class AnomalyGroup:
         NT_g = self._neighbor_tightness()
         Pi_g = AnomalyScorer.weighted_geometric_mean(np.array([RT_g, PT_g, NT_g]), np.array([1/3, 1/3, 1/3]))
         return Pi_g    
+    
+    def __len__(self):
+        return self.n_users
 
 class AnomalyScorer:
 
-    def __init__(self, dataset: BasicDataset, enable_penalty: bool, use_metadata: bool = True, burstness_threshold: int = 30):
+    def __init__(self, dataset: BasicDataset, enable_penalty: bool, use_metadata: bool = True, burstness_threshold: int = 30, 
+                 max_group_size: int = 5000):
         """
         Initializes AnomalyScorer object.
         
@@ -267,12 +273,15 @@ class AnomalyScorer:
             enable_penalty (bool) - boolean indicating whether to enable penalty for smaller groups
             use_metadata (bool) - boolean indicating whether to use metadata for anomaly scoring
             burstness_threshold (int) - minimum number of days user must be active for to have 0 burstness score
+            max_group_size (int) - if a group is greater than this size, we say it cannot be fraudulent and give it 0 anomaly score
+                                   even if a fraud group of this size exists, it should be caught by smaller sub-groups
         """
         self.dataset = dataset
         self.enable_penalty = enable_penalty
         self.use_metadata = use_metadata
         self.burstness_threshold = burstness_threshold
         self.user_simi = UserSimilarity(dataset.graph_u2i)
+        self.max_group_size = max_group_size
 
         if use_metadata:
             self.avg_ratings = dataset.metadata_df.groupby(dataset.METADATA_ITEM_ID)[dataset.METADATA_STAR_RATING].mean()
@@ -304,8 +313,12 @@ class AnomalyScorer:
         OUTPUTS:
             score (float): overall anomaly score for the group
         """
+        if len(group) > self.max_group_size:
+            return 0
+
         if isinstance(group, list):
             group = AnomalyGroup.make_group(group, self.user_simi) 
+
         if self.use_metadata:
             group_mean_avrd = np.mean(self.avrd[group.users]) / 5 # divide by 5 to normalize (max 5 star rating difference)
             group_mean_burstness = np.mean(self.burstness[group.users])
