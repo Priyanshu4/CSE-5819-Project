@@ -1,6 +1,7 @@
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.manifold import TSNE
 
 def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None):
@@ -22,8 +23,17 @@ def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None):
 
     mask = labels == 0
 
-    # plot the embeddings
+    plt.figure(figsize=(10, 8))
     plt.scatter(embeddings[:, 0], embeddings[:, 1], c=mask, cmap='RdYlGn')
+
+    plt.title('User Embeddings with True Labels')
+
+    if features > 2:
+        plt.xlabel('TSNE Component 1')
+        plt.ylabel('TSNE Component 2')
+    else:
+        plt.xlabel('Latent Space Component 1')
+        plt.ylabel('Latent Space Component 2')   
 
     # Add legend
     plt.legend(handles=[plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='g', markersize=8),
@@ -31,6 +41,46 @@ def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None):
                 labels=['Genuine', 'Fraud'])
 
     
-    plt.savefig(path)
-    plt.clf()
-  
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
+
+def plot_embeddings_with_anomaly_scores(embeddings: np.array, user_anomaly_scores: np.array, path: Path = None):
+    """
+    Saves a plot of the embeddings to the given path. 
+    Embeddings are colored according to the anomaly score of a user.
+    Users which have a higher anomaly score are given a more red color, while lower anomaly scores have a more blue color.
+    If the embeddings have more than 2 dimensions, they will be reduced to 2 dimensions using TSNE.
+
+    Arguments:
+        embeddings -- array of embeddings to plot with shape (n_users, n_features)
+        user_anomaly_scores -- array of anomaly scores with shape (n_users,) and values between 0 and 1
+        path -- path to save the plot to
+    """    
+    users, features = np.shape(embeddings)
+
+    if features > 2:
+        tsne = TSNE(n_components=2)
+        embeddings = tsne.fit_transform(embeddings)
+
+    # Create a colormap from blue to red
+    colors = sns.color_palette("coolwarm", as_cmap=True)
+
+    # Create a scatter plot
+    plt.figure(figsize=(10, 8))
+    sns.scatterplot(embeddings[:, 0], embeddings[:, 1], hue=user_anomaly_scores, palette=colors, legend=False)
+
+    plt.title('User Embeddings with Anomaly Scores')
+
+    if features > 2:
+        plt.xlabel('TSNE Component 1')
+        plt.ylabel('TSNE Component 2')
+    else:
+        plt.xlabel('Latent Space Component 1')
+        plt.ylabel('Latent Space Component 2')   
+
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()

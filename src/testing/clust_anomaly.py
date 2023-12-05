@@ -7,6 +7,27 @@ import logging
 from .metrics import evaluate_predictions
 import src.utils as utils
 
+def userwise_anomaly_scores(clusters, anomaly_scores, n_users):
+    """
+    Given a set a clusters and anomaly scores for each clusters, this computes anomaly scores for each user.
+    The anomaly score for a user is the lowest anomaly score of any cluster it is in.
+    This indicates the threshold at which a user may be classified as fraud.
+
+    Arguments:
+        clusters (list): A list of lists of users (indices) in each cluster.
+        anomaly_scores (np.ndarray): An array of anomaly scores for each cluster.
+        n_users (int): number of users
+
+    Returns:
+        user_anomaly_scores (np.ndarray): An array of anomaly scores for each user
+    """
+    user_anomaly_scores = np.zeros(n_users)
+    for i, score in enumerate(anomaly_scores):
+        for user in clusters[i]:
+            if user_anomaly_scores[user] > score:
+                user_anomaly_scores[user] = score
+    return user_anomaly_scores
+
 def clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold: float, true_labels: np.array):
     """
     Detects fraud users using a list of candidate clusters and their anomaly scores.

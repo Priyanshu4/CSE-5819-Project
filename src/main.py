@@ -23,7 +23,7 @@ import src.utils as utils
 from src.embedding.lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
 from src.embedding.loss import SimilarityLoss, BPRLoss
 from src.embedding import training
-from src.visualization.embvis import plot_embeddings
+from src.visualization.embvis import plot_embeddings, plot_embeddings_with_anomaly_scores
 from src.visualization.trainvis import plot_loss_epochs
 
 
@@ -32,8 +32,7 @@ from src.clustering.anomaly import AnomalyScorer
 from src.clustering import split
 
 from src.testing.dbscan import test_optics_dbscan_fraud_detection, log_dbscan_results
-from src.testing.clust_anomaly import (test_clust_anomaly_fraud_detection, log_clust_anomaly_results, 
-                                       test_hierarchical_clust_anomaly_fraud_detection, log_hierarchical_clust_anomaly_results)
+from src.testing.clust_anomaly import (test_clust_anomaly_fraud_detection, log_clust_anomaly_results, userwise_anomaly_scores)
 
 
 def embedding_main(args, dataset, results_path, logger):
@@ -135,9 +134,12 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
 
             with utils.timer(name="plotting"):
                 if args.plot:
+                    plt.figure(figsize=(10, 8))
                     hdbscan_clusterer.condensed_tree_.plot(select_clusters=True, selection_palette=sns.color_palette('deep', 8))
-                    plt.savefig(results_path / "hdbscan_tree.png")
+                    hdbscan_tree_fig_path = results_path / "hdbscan_tree.png"
+                    plt.savefig(hdbscan_tree_fig_path)
                     plt.close()
+                    logger.info(f"Saved condensed tree plot to {hdbscan_tree_fig_path}")
 
             with utils.timer(name="anomaly_scores"):
                 anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
@@ -191,8 +193,14 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
         logger.info(f"\tmedian={np.median(scaled_anomaly_scores)}")
         logger.info(f"\tstd={np.std(scaled_anomaly_scores)}")
 
-        thresholds = list(np.linspace(0, 0.9, 9, endpoint=False)) + list(np.linspace(0.9, 0.99, 9, endpoint=False)) + list(np.linspace(0.99, 1, 11))     
 
+        if args.plot:
+            anomaly_score_plot_path = results_path / "anomaly_scores.png"
+            user_anomaly_scores = userwise_anomaly_scores(clusters, anomaly_scores, n_users)
+            plot_embeddings_with_anomaly_scores(user_embs, user_anomaly_scores, anomaly_score_plot_path)
+            logger.info(f"Saved anomaly score plot to {anomaly_score_plot_path}")
+            
+        thresholds = list(np.linspace(0, 0.9, 9, endpoint=False)) + list(np.linspace(0.9, 0.99, 9, endpoint=False)) + list(np.linspace(0.99, 1, 11))     
         results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
         log_clust_anomaly_results(thresholds, results, best, logger)
 
