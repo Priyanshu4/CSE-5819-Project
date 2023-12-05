@@ -3,9 +3,9 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
-def save_embeddings_plot(embeddings: np.array, labels: np.array, path: Path):
+def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None):
     """
-    Saves a plot of the embeddings to the given path.
+    Saves a plot of the embeddings to the given path. 
     Embeddings are colored according to the labels.
     If the embeddings hav more than 2 dimensions, they will be reduced to 2 dimensions using TSNE.
 
@@ -30,6 +30,7 @@ def save_embeddings_plot(embeddings: np.array, labels: np.array, path: Path):
                             plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='r', markersize=8)],
                 labels=['Genuine', 'Fraud'])
 
+    
     plt.savefig(path)
     plt.clf()
   

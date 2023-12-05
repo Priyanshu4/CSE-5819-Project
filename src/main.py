@@ -23,7 +23,9 @@ import src.utils as utils
 from src.embedding.lightgcn import LightGCNTrainingConfig, LightGCNConfig, LightGCN
 from src.embedding.loss import SimilarityLoss, BPRLoss
 from src.embedding import training
-from src.visualization.embvis import save_embeddings_plot
+from src.visualization.embvis import plot_embeddings
+from src.visualization.trainvis import plot_loss_epochs
+
 
 from src.clustering.hclust import HClust
 from src.clustering.anomaly import AnomalyScorer
@@ -34,7 +36,7 @@ from src.testing.clust_anomaly import (test_clust_anomaly_fraud_detection, log_c
                                        test_hierarchical_clust_anomaly_fraud_detection, log_hierarchical_clust_anomaly_results)
 
 
-def embedding_main(args, dataset, logger):
+def embedding_main(args, dataset, results_path, logger):
     """ Main code for the lightgcn training and embedding generation.
     """
     GPU = torch.cuda.is_available()
@@ -92,11 +94,20 @@ def embedding_main(args, dataset, logger):
     logger.info(f"Training with {loss.__class__.__name__} loss and {optimizer.__class__.__name__} optimizer.")
     logger.info(f"LightGCN configured to produce {lightgcn_config.latent_dim} dimensional embeddings.")
 
+    losses = np.zeros(train_config.epochs)
     for epoch in range(train_config.epochs):
-        train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
+        losses[epoch] = train_lightgcn(dataset, lightgcn, loss, optimizer, epoch, logger)
 
+    if args.plot:
+        loss_plot_file = results_path / "loss.png"
+        plot_loss_epochs(losses, loss_plot_file)
+        logger.info(f"Saved a plot of loss over epochs to {loss_plot_file}")
+        
     user_embs, item_embs = lightgcn()
-
+    embeddings_save_file = results_path / "embeddings.pkl"
+    pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
+    logger.info(f"Saved user embeddings to {embeddings_save_file}")
+    
     return user_embs.detach().cpu().numpy()
 
 def clustering_main(args, dataset, user_embs, results_path, logger):
@@ -122,7 +133,6 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
                 hdbscan_clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
                 hdbscan_clusterer.fit(user_embs)
 
-            
             with utils.timer(name="plotting"):
                 if args.plot:
                     hdbscan_clusterer.condensed_tree_.plot(select_clusters=True, selection_palette=sns.color_palette('deep', 8))
@@ -132,8 +142,6 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             with utils.timer(name="anomaly_scores"):
                 anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
                 groups, anomaly_scores = anomaly_scorer.hdbscan_tree_anomaly_scores(hdbscan_clusterer.condensed_tree_.to_pandas())
-
-            with utils.timer(name="group_mapping"):
                 clusters = [g.users for g in groups]
 
             time_info = utils.timer.formatted_tape_str(select_keys=["clustering", "plotting", "anomaly_scores", "group_mapping"])
@@ -156,11 +164,12 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
 
             for i, group in enumerate(split_groups):
 
+                logger.info(f"Clustering group {i} ({len(group)} users)")
                 with utils.timer(name="linkages"):
                     hclust = HClust(group)
                     linkage = hclust.generate_linkage_matrix(method=args.linkage)
 
-                # Generate anomaly scores
+                logger.info(f"Computing anomaly scores for group {i}")
                 with utils.timer(name="anomaly_scores"):
                     group_clusters, group_anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage, mappings[i])
                     clusters.extend(g.users for g in group_clusters)
@@ -170,8 +179,9 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             logger.info(f"Clustering Time: {time_info}")
             utils.timer.zero(select_keys=["linkages", "anomaly_scores"])
 
-        scale_factor = 1 / np.max(anomaly_scores)
-        scaled_anomaly_scores = anomaly_scores / np.max(anomaly_scores)
+        max_anomaly_score = np.max(anomaly_scores)
+        scale_factor = 1 if max_anomaly_score <= 1 else 1 / max_anomaly_score
+        scaled_anomaly_scores = anomaly_scores * scale_factor
 
         logger.info(f"Anomaly scores scaled by {scale_factor}.")
         logger.info("Anomaly score statistics:")
@@ -258,14 +268,11 @@ if __name__ == "__main__":
         logger.info(f"Skipping training. Loading embeddings from {args.embeddings}")
         user_embs = dataloader.load_user_embeddings(args.embeddings)
     else:
-        user_embs = embedding_main(args, dataset, logger)
-        embeddings_save_file = results_path / "embeddings.pkl"
-        pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
-        logger.info(f"Saved user embeddings to {embeddings_save_file}")
+        user_embs = embedding_main(args, dataset, results_path, logger)
 
     if args.plot:
         embeddings_plot_save_file = results_path / "embeddings.png"
-        save_embeddings_plot(user_embs, dataset.user_labels, embeddings_plot_save_file)
+        plot_embeddings(user_embs, dataset.user_labels, embeddings_plot_save_file)
         logger.info(f"Saved embeddings plot to {embeddings_plot_save_file}")
 
     clustering_main(args, dataset, user_embs, results_path, logger)
