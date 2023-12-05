@@ -122,10 +122,12 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
                 hdbscan_clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
                 hdbscan_clusterer.fit(user_embs)
 
+            
             with utils.timer(name="plotting"):
-                hdbscan_clusterer.condensed_tree_.plot(select_clusters=True, selection_palette=sns.color_palette('deep', 8))
-                plt.savefig(results_path / "hdbscan_tree.png")
-                plt.close()
+                if args.plot:
+                    hdbscan_clusterer.condensed_tree_.plot(select_clusters=True, selection_palette=sns.color_palette('deep', 8))
+                    plt.savefig(results_path / "hdbscan_tree.png")
+                    plt.close()
 
             with utils.timer(name="anomaly_scores"):
                 anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
@@ -139,7 +141,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             utils.timer.zero(select_keys=["clustering", "plotting", "anomaly_scores", "group_mapping"])
 
         elif args.clustering == "hclust":
-            logger.info("Clustering with hierarchical clustering and anomaly scores for fraud detection.")
+            logger.info(f"Clustering with hierarchical clustering ({args.linkage} linkage) and anomaly scores for fraud detection.")
         
             max_group_size = 60000
             split_groups, group_indices = split.split_matrix_kmeans(user_embs, max_group_size=max_group_size)
@@ -156,7 +158,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
 
                 with utils.timer(name="linkages"):
                     hclust = HClust(group)
-                    linkage = hclust.generate_linkage_matrix()
+                    linkage = hclust.generate_linkage_matrix(method=args.linkage)
 
                 # Generate anomaly scores
                 with utils.timer(name="anomaly_scores"):
@@ -202,6 +204,9 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str, default="", help="The experiment name for the results folder.")
     parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataloader.dataset_names}")
     parser.add_argument("--seed", type=int, default=5819, help="random seed")
+    parser.add_argument("--plot", action="store_true", help="save plots to results folder")
+    parser.add_argument("--no_plot", action="store_false", dest="plot", help="save plots to results folder")
+    parser.set_defaults(plot=True)
 
     # Arguments for embedding and LightGCN
     parser.add_argument("--embeddings", type=str, default="", help="The path to the embeddings file. If given, training is skipped and clustering is done directly.")
@@ -224,6 +229,7 @@ if __name__ == "__main__":
 
     # Arguments for clustering and anomaly scores
     parser.add_argument("--clustering", type=str, default="hclust", help="The clustering algorithm to use. Options: hclust, hdbscan, dbscan, none")
+    parser.add_argument("--linkage", type=str, default="average", help="The linkage to use in hierarchical clustering. Options: single, average, ward")
     parser.add_argument("--no_metadata", action="store_false", dest="metadata", help="Do not use metadata in anomaly score computation.")
     parser.add_argument("--tau", type=float, default=30, help="The threshold for burstness for anomaly score computation in units of days.")
  
@@ -257,9 +263,10 @@ if __name__ == "__main__":
         pickle.dump(user_embs, open(embeddings_save_file, 'wb'))
         logger.info(f"Saved user embeddings to {embeddings_save_file}")
 
-    embeddings_plot_save_file = results_path / "embeddings.png"
-    save_embeddings_plot(user_embs, dataset.user_labels, embeddings_plot_save_file)
-    logger.info(f"Saved embeddings plot to {embeddings_plot_save_file}")
+    if args.plot:
+        embeddings_plot_save_file = results_path / "embeddings.png"
+        save_embeddings_plot(user_embs, dataset.user_labels, embeddings_plot_save_file)
+        logger.info(f"Saved embeddings plot to {embeddings_plot_save_file}")
 
     clustering_main(args, dataset, user_embs, results_path, logger)
 

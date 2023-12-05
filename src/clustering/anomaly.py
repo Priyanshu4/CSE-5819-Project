@@ -62,11 +62,13 @@ class AnomalyGroup:
         return group
     
     @staticmethod
-    def make_group_from_many_children(children: list['AnomalyGroup'], user_simi: UserSimilarity) -> 'AnomalyGroup':
+    def make_group_from_many_children(children: list['AnomalyGroup'], user_simi: UserSimilarity, recursive: bool = True) -> 'AnomalyGroup':
         """
         Makes an anomaly group object from many child anomaly groups.
         Internally uses make_group_from_children() to merge two groups at a time.
-        Recursively merges two halves of the list of children until there is only one group left.
+
+        In recursive mode, this recursively merges two halves of the list of children until there is only one group left.
+        In iterative mode, this repeateadly takes two children and merges them into one until there is only one group left.
 
         INPUTS:
             children (list[AnomalyGroup]) - list of AnomalyGroup objects
@@ -75,17 +77,32 @@ class AnomalyGroup:
         OUTPUTS:
             group (AnomalyGroup) - AnomalyGroup object
         """
+        if recursive:
+            return AnomalyGroup._make_group_from_many_children_recursive(children, user_simi)
+        
+        while len(children) > 1:
+            child1 = children.pop(0)
+            child2 = children.pop(0)
+            group = AnomalyGroup.make_group_from_children(child1, child2, user_simi)
+            group._average_jaccard() # compute average jaccard similarity, which is used by parent groups
+            children.append(group)
+
+        return children[0]
+
+    @staticmethod
+    def _make_group_from_many_children_recursive(children: list['AnomalyGroup'], user_simi: UserSimilarity) -> 'AnomalyGroup':
+        """ Helper function to make_group_from_many_children() """
         if len(children) == 1:
             return children[0]
         elif len(children) == 2:
             return AnomalyGroup.make_group_from_children(children[0], children[1], user_simi)
         else:
             return AnomalyGroup.make_group_from_children(
-                AnomalyGroup.make_group_from_many_children(children[:len(children) // 2], user_simi),
-                AnomalyGroup.make_group_from_many_children(children[len(children) // 2:], user_simi),
+                AnomalyGroup.make_group_from_many_children(children[:len(children) // 2], user_simi, recursive),
+                AnomalyGroup.make_group_from_many_children(children[len(children) // 2:], user_simi, recursive),
                 user_simi
-            )
-        
+            )        
+     
     @staticmethod
     def make_single_user_group(user: int, user_simi: UserSimilarity) -> 'AnomalyGroup':
         """
