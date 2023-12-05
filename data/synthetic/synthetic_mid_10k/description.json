@@ -1,0 +1,23 @@
+{
+    "dataset_name": "synthetic_mid_10k",
+    "dataset_comment": "Medium difficult synthetic dataset with 10k users and 3 fraud groups of size 100 (20 products), 50 (30 products), and 20 (10 products). There is also some noise.",
+    "n_users": 10000,
+    "n_items": 100,
+    "n_legitimate_ratings": 30000,
+    "fraud_group_sizes": [
+        [
+            100,
+            20
+        ],
+        [
+            50,
+            30
+        ],
+        [
+            20,
+            10
+        ]
+    ],
+    "additive_noise": 1,
+    "subtractive_noise": 1
+}
