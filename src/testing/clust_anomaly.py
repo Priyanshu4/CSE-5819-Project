@@ -24,7 +24,7 @@ def userwise_anomaly_scores(clusters, anomaly_scores, n_users):
     user_anomaly_scores = np.zeros(n_users)
     for i, score in enumerate(anomaly_scores):
         for user in clusters[i]:
-            if user_anomaly_scores[user] > score:
+            if user_anomaly_scores[user] < score:
                 user_anomaly_scores[user] = score
     return user_anomaly_scores
 
@@ -70,7 +70,7 @@ def test_clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold_value
     for i, threshold in enumerate(threshold_values):
         predicted_labels, cluster_labels = clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold, true_labels)
         largest_fraud_group_size = max(range(len(cluster_labels)), 
-                                        key=lambda i: len(clusters[i]) if cluster_labels == 1 else -1)
+                                        key=lambda i: len(clusters[i]) if cluster_labels[i] == 1 else -1)
         result = evaluate_predictions(true_labels, predicted_labels)
         result["largest_fraud_group_size"] = largest_fraud_group_size
         if result['f1_score'] > best_f1:

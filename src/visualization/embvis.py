@@ -1,7 +1,7 @@
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
-import seaborn as sns
+import matplotlib.cm as cm
 from sklearn.manifold import TSNE
 
 def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None):
@@ -43,6 +43,7 @@ def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None):
     
     if path is not None:
         plt.savefig(path)
+        plt.close()
     else:
         plt.show()
 
@@ -64,13 +65,10 @@ def plot_embeddings_with_anomaly_scores(embeddings: np.array, user_anomaly_score
         tsne = TSNE(n_components=2)
         embeddings = tsne.fit_transform(embeddings)
 
-    # Create a colormap from blue to red
-    colors = sns.color_palette("coolwarm", as_cmap=True)
+    scatter = plt.scatter(embeddings[:,0], embeddings[:,1], c=user_anomaly_scores, cmap='coolwarm')  
 
-    # Create a scatter plot
-    plt.figure(figsize=(10, 8))
-    sns.scatterplot(embeddings[:, 0], embeddings[:, 1], hue=user_anomaly_scores, palette=colors, legend=False)
-
+    # Add color bar
+    plt.colorbar(scatter, label='Anomaly Scores')
     plt.title('User Embeddings with Anomaly Scores')
 
     if features > 2:
@@ -82,5 +80,6 @@ def plot_embeddings_with_anomaly_scores(embeddings: np.array, user_anomaly_score
 
     if path is not None:
         plt.savefig(path)
+        plt.close()
     else:
         plt.show()

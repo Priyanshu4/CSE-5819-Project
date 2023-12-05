@@ -18,5 +18,9 @@ def plot_loss_epochs(loss_values: np.ndarray, path: Path):
     plt.title("Loss Across Epochs")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
-    plt.savefig(path)
-    plt.clf()
+
+    if path is not None:
+        plt.savefig(path)
+        plt.close()
+    else:
+        plt.show()

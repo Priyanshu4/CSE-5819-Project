@@ -6,7 +6,6 @@ import json
 import numpy as np
 import logging
 import sys
-import seaborn as sns   
 import matplotlib.pyplot as plt
 import hdbscan
 
@@ -135,7 +134,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             with utils.timer(name="plotting"):
                 if args.plot:
                     plt.figure(figsize=(10, 8))
-                    hdbscan_clusterer.condensed_tree_.plot(select_clusters=True, selection_palette=sns.color_palette('deep', 8))
+                    hdbscan_clusterer.condensed_tree_.plot()
                     hdbscan_tree_fig_path = results_path / "hdbscan_tree.png"
                     plt.savefig(hdbscan_tree_fig_path)
                     plt.close()
@@ -146,7 +145,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
                 groups, anomaly_scores = anomaly_scorer.hdbscan_tree_anomaly_scores(hdbscan_clusterer.condensed_tree_.to_pandas())
                 clusters = [g.users for g in groups]
 
-            time_info = utils.timer.formatted_tape_str(select_keys=["clustering", "plotting", "anomaly_scores", "group_mapping"])
+            time_info = utils.timer.formatted_tape_str(select_keys=["clustering", "plotting", "anomaly_scores"])
             logger.info(f"HDBSCAN Time: {time_info}")
             utils.timer.zero(select_keys=["clustering", "plotting", "anomaly_scores", "group_mapping"])
 
