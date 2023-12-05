@@ -252,7 +252,11 @@ if __name__ == "__main__":
  
     args = parser.parse_args()
 
-    experiment_name = args.name + utils.current_timestamp()
+    if args.name:
+        experiment_name = args.name + "_" + utils.current_timestamp()
+    else:
+        experiment_name = utils.current_timestamp()
+        
     results_path = get_results_path(experiment_name)
 
     # Write a json file with the experiment parameters
