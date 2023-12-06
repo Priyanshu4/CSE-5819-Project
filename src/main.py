@@ -196,7 +196,11 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             plot_embeddings_with_anomaly_scores(user_embs, user_anomaly_scores, anomaly_score_plot_path)
             logger.info(f"Saved anomaly score plot to {anomaly_score_plot_path}")
             
-        thresholds = list(np.linspace(0, 0.9, 9, endpoint=False)) + list(np.linspace(0.9, 0.99, 9, endpoint=False)) + list(np.linspace(0.99, 1, 11))     
+        thresholds = np.concatenate((np.linspace(0, 0.9, 9, endpoint=False),
+                                     np.linspace(0.9, 0.99, 9, endpoint=False),
+                                     np.linspace(0.99, 0.999, 9, endpoint=False),
+                                     np.linspace(0.999, 1, 11, endpoint=False)))
+
         results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
         log_clust_anomaly_results(thresholds, results, best, logger)
 
