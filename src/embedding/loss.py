@@ -30,8 +30,11 @@ class SimilarityLoss(ModelLoss):
     def __init__(self, device: torch.device, dataset: BasicDataset, n_pos: int, n_neg: int, fast_sampling: bool = False):
         super().__init__(device, dataset)
         self.user_simi = UserSimilarity(dataset.graph_u2i)
-        self.n_pos = n_pos
-        self.n_neg = n_neg
+        if fast_sampling:
+            self.n_pos, self.n_neg = sampling.get_adjusted_npos_nneg_for_fast_sampling(self.user_simi, n_pos, n_neg)
+        else:
+            self.n_pos = n_pos
+            self.n_neg = n_neg
         self.fast_sampling = fast_sampling
 
     def get_loss(self, user_nodes, user_embs, samples):

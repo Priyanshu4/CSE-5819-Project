@@ -73,3 +73,13 @@ class UserSimilarity:
             simi_score = intersection_count / union_count
         return float(simi_score)
     
+    def items_in_common(self, u1: int, u2: int):
+        """ 
+        Returns the number of items in common between user1 and user2.
+        In other words, the size of the intersection of their product sets.
+        """
+        u1 = self.get_user_bitarray(u1)
+        u2 = self.get_user_bitarray(u2)
+        intersection = u1 & u2
+        items_in_common = intersection.count()
+        return items_in_common

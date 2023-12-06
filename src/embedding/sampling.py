@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+from src.similarity import UserSimilarity
 
 from src.dataloader import BasicDataset
 
@@ -19,6 +20,37 @@ def set_sampling_seed(seed):
     if _sample_ext:
         _sampling.set_seed(seed)
 
+
+def prob_neg_sample(user_simi: UserSimilarity, sample_size: int = "auto"):
+    """
+    Through random sampling, this computes that the probability that two random users drawn from the dataset share no items in common.
+    This value is useful to adjust n_neg for fast sampling with sample_train_set_pos_neg_users.
+    """
+    n_users = user_simi.shape[0]
+    if sample_size == "auto":
+        sample_size = n_users // 10
+
+    neg_samples = 0
+
+    rand_users = np.random.randint(n_users, size=sample_size, dtype=int)
+    rand_samples = np.random.randint(n_users, size=sample_size, dtype=int)
+    for i in range(sample_size):
+        if user_simi.items_in_common(rand_users[i], rand_samples[i]) == 0:
+            neg_samples += 1
+
+    return neg_samples / sample_size
+
+def get_adjusted_npos_nneg_for_fast_sampling(user_simi: UserSimilarity, n_pos: int, n_neg: int):
+    """
+    Adjusts the values of n_pos and n_neg so the same ratio of positive to negative samples is maintained when fast sampling is enabled.
+    """
+    neg_prob = prob_neg_sample(user_simi)
+    n_neg_adjusted = n_neg / neg_prob
+    total = n_pos + n_neg
+    total_adjusted = n_pos + n_neg_adjusted
+    n_neg_adjusted = round(n_neg_adjusted * (total / total_adjusted))
+    n_pos_adjusted = total - n_neg_adjusted 
+    return n_pos_adjusted, n_neg_adjusted
 
 def sample_train_set_pos_neg_users(dataset: BasicDataset, n_pos: int, n_neg: int, fast: bool = False):
     """ For each user node in the dataset, this samples n_pos positive nodes and n_neg negative nodes.

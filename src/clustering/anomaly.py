@@ -182,7 +182,7 @@ class AnomalyGroup:
         OUTPUTS:
             RT_g (float) - review tightness for the group
         """
-        RT_g = (self.n_total_reviews * self.penalty) / (self.n_users * self.n_total_products_reviewed)
+        RT_g = (self.n_total_reviews) / (self.n_users * self.n_total_products_reviewed)
         return RT_g
 
     def _product_tightness(self):
@@ -234,7 +234,7 @@ class AnomalyGroup:
         OUTPUTS:
             NT_g (float) - neighbor tightness for the group
         """
-        NT_g = self._average_jaccard() * self.penalty
+        NT_g = self._average_jaccard()
         return NT_g
     
     def group_anomaly_compactness(self, enable_penalty: bool = False):
@@ -255,7 +255,7 @@ class AnomalyGroup:
         RT_g = self._review_tightness()
         PT_g = self._product_tightness()
         NT_g = self._neighbor_tightness()
-        Pi_g = AnomalyScorer.weighted_geometric_mean(np.array([RT_g, PT_g, NT_g]), np.array([1/3, 1/3, 1/3]))
+        Pi_g = self.penalty * AnomalyScorer.weighted_harmonic_mean(np.array([RT_g, PT_g, NT_g]), np.array([1/4, 1/4, 1/2]))
         return Pi_g    
     
     def __len__(self):
@@ -422,6 +422,15 @@ class AnomalyScorer:
             return 0
         return np.exp(AnomalyScorer.weighted_arithmetic_mean(np.log(scores), weights))
 
+    @staticmethod
+    def weighted_harmonic_mean(scores: np.ndarray, weights: np.ndarray):
+        """
+        Computes the weighted harmonic mean of the scores.
+        """
+        if np.any(scores == 0.0):
+            return 0
+        return np.sum(weights / np.sum(weights / scores))
+    
     @staticmethod
     def weighted_arithmetic_mean(scores: np.ndarray, weights: np.ndarray):
         """

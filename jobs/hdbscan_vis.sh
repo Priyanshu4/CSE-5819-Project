@@ -16,4 +16,4 @@ conda activate fake-review-group-detection
 
 cd ..
 
-python -m src.main --name mid_10k_hdbscan --dataset synthetic_mid_10k --loss simi --optimizer adam --epochs 100 --dim 2 --clustering hdbscan
+python -m src.main --name mid_10k_hdbscan --dataset synthetic_mid_10k --loss simi --optimizer adam --epochs 100 --dim 4 --clustering hdbscan 
