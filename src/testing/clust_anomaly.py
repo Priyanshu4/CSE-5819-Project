@@ -69,8 +69,9 @@ def test_clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold_value
     best_f1 = -1
     for i, threshold in enumerate(threshold_values):
         predicted_labels, cluster_labels = clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold, true_labels)
-        largest_fraud_group_size = max(range(len(cluster_labels)), 
+        largest_fraud_group = max(range(len(cluster_labels)), 
                                         key=lambda i: len(clusters[i]) if cluster_labels[i] == 1 else -1)
+        largest_fraud_group_size = len(clusters[largest_fraud_group])
         result = evaluate_predictions(true_labels, predicted_labels)
         result["largest_fraud_group_size"] = largest_fraud_group_size
         if result['f1_score'] > best_f1:
@@ -92,7 +93,7 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
     results_table = []
     for i, result in enumerate(results):
         results_table.append({
-            "Threshold": f"{threshold_values[i]:.3f}",
+            "Threshold": f"{threshold_values[i]:.4f}",
             "Accuracy": f"{result['accuracy']:.3f}",
             "Precision": f"{result['precision']:.3f}",
             "Recall": f"{result['recall']:.3f}",
@@ -100,7 +101,7 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
             "Largest Group": f"{result['largest_fraud_group_size']}"
         })
     results_table.append({
-        "Threshold": f"Best ({threshold_values[best_threshold]:.3f})",
+        "Threshold": f"Best ({threshold_values[best_threshold]:.4f})",
         "Accuracy": f"{results[best_threshold]['accuracy']:.3f}",
         "Precision": f"{results[best_threshold]['precision']:.3f}",
         "Recall": f"{results[best_threshold]['recall']:.3f}",
