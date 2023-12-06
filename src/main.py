@@ -77,7 +77,9 @@ def embedding_main(args, dataset, results_path, logger):
         loss = BPRLoss(device, dataset, weight_decay=train_config.weight_decay)
         train_lightgcn = training.train_lightgcn_bpr_loss
     elif args.loss == "simi":
-        loss = SimilarityLoss(device, dataset, n_pos=10, n_neg=10, fast_sampling=args.fast_simi)
+        loss = SimilarityLoss(device, dataset, n_pos=10, n_neg=15, fast_sampling=args.fast_simi)
+        if loss.fast_sampling:
+            logger.info(f"Adjusted n_pos {loss.n_pos}, n_neg {loss.n_neg}")
         train_lightgcn = training.train_lightgcn_simi_loss
     else:
         logger.error(f"Loss function {args.loss} is not supported.")

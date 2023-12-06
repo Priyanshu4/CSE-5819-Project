@@ -88,7 +88,7 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
         results (list): Output from test_clust_anomaly_fraud_detection.        
         best_threshold (int): The index of the threshold value with the best F1 score. Output from test_clust_anomaly_fraud_detection.
     """
-    headers = ["Threshold", "Accuracy", "Precision", "Recall", "F1 Score"]
+    headers = ["Threshold", "Accuracy", "Precision", "Recall", "F1 Score", "Largest Group"]
     results_table = []
     for i, result in enumerate(results):
         results_table.append({
@@ -105,6 +105,8 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
         "Precision": f"{results[best_threshold]['precision']:.3f}",
         "Recall": f"{results[best_threshold]['recall']:.3f}",
         "F1 Score": f"{results[best_threshold]['f1_score']:.3f}",
+        "Largest Group": f"{results[best_threshold]['largest_fraud_group_size']}"
+
     })
     utils.print_table(headers, results_table, logger.info)
     return results_table
