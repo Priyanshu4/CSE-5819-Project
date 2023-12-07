@@ -24,7 +24,7 @@ from src.embedding.loss import SimilarityLoss, BPRLoss
 from src.embedding import training
 from src.visualization.embvis import plot_embeddings, plot_embeddings_with_anomaly_scores
 from src.visualization.trainvis import plot_loss_epochs
-
+from sklearn.metrics import RocCurveDisplay
 
 from src.clustering.hclust import HClust
 from src.clustering.anomaly import AnomalyScorer
@@ -154,8 +154,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             mappings = split.build_group_split_mappings(split_groups, group_indices)
             logger.info(f"Split {n_users} into {len(split_groups)} with max size {max_group_size}.")
 
-            enable_penalty = (args.clustering == "hclust")   # Only enable penalty for hclust not hclust2
-            anomaly_scorer = AnomalyScorer(dataset, enable_penalty=enable_penalty, use_metadata=use_metadata, burstness_threshold=args.tau)
+            anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
 
             clusters = []
             anomaly_scores = []
@@ -192,10 +191,17 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
 
         if args.plot:
             anomaly_score_plot_path = results_path / "anomaly_scores.png"
-            user_anomaly_scores = userwise_anomaly_scores(clusters, anomaly_scores, n_users)
+            user_anomaly_scores = userwise_anomaly_scores(clusters, scaled_anomaly_scores, n_users)
             plot_embeddings_with_anomaly_scores(user_embs, user_anomaly_scores, anomaly_score_plot_path)
             logger.info(f"Saved anomaly score plot to {anomaly_score_plot_path}")
-            
+
+            roc_curve_plot_path = results_path / "roc.png"
+            roc = RocCurveDisplay.from_predictions(dataset.user_labels, user_anomaly_scores)
+            roc.plot()
+            plt.savefig(roc_curve_plot_path)
+            plt.close()
+            logger.info(f"Saved ROC curve plot to {roc_curve_plot_path}")
+    
         thresholds = np.concatenate((np.linspace(0, 0.9, 9, endpoint=False),
                                      np.linspace(0.9, 0.99, 9, endpoint=False),
                                      np.linspace(0.99, 0.999, 9, endpoint=False),
@@ -238,7 +244,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_dropout", action="store_false", dest="dropout", help="disable dropout")
     parser.set_defaults(dropout=False)
     parser.add_argument("--keepprob", type=float, default=0.6, help="the dropout keep prob")
-    parser.add_argument("--a_fold", type=int, default=100, help="the fold num used to split large adj matrix")
+    parser.add_argument("--a_fold", type=int, default=1, help="the fold num used to split large adj matrix")
     parser.add_argument("--loss", type=str, default="simi", help="loss function, options: bpr, simi")
     parser.add_argument("--optimizer", type=str, default="adam", help="optimizer, options: adam, sgd")
     parser.add_argument("--fast_simi", action="store_true", help="faster sampling for simi loss, use for very large & sparse datasets")
@@ -247,7 +253,7 @@ if __name__ == "__main__":
 
     # Arguments for clustering and anomaly scores
     parser.add_argument("--clustering", type=str, default="hclust", help="The clustering algorithm to use. Options: hclust, hdbscan, dbscan, none")
-    parser.add_argument("--linkage", type=str, default="average", help="The linkage to use in hierarchical clustering. Options: single, average, ward")
+    parser.add_argument("--linkage", type=str, default="ward", help="The linkage to use in hierarchical clustering. Options: single, average, ward")
     parser.add_argument("--no_metadata", action="store_false", dest="metadata", help="Do not use metadata in anomaly score computation.")
     parser.add_argument("--tau", type=float, default=30, help="The threshold for burstness for anomaly score computation in units of days.")
  

@@ -10,7 +10,7 @@ import src.utils as utils
 def userwise_anomaly_scores(clusters, anomaly_scores, n_users):
     """
     Given a set a clusters and anomaly scores for each clusters, this computes anomaly scores for each user.
-    The anomaly score for a user is the lowest anomaly score of any cluster it is in.
+    The anomaly score for a user is the highest anomaly score of any cluster it is in.
     This indicates the threshold at which a user may be classified as fraud.
 
     Arguments:
