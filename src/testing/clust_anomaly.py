@@ -89,22 +89,24 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
         results (list): Output from test_clust_anomaly_fraud_detection.        
         best_threshold (int): The index of the threshold value with the best F1 score. Output from test_clust_anomaly_fraud_detection.
     """
-    headers = ["Threshold", "Accuracy", "Precision", "Recall", "F1 Score", "Largest Group"]
+    headers = ["Threshold", "Accuracy", "Precision", "Recall", "FPR", "F1 Score", "Largest Group"]
     results_table = []
     for i, result in enumerate(results):
         results_table.append({
-            "Threshold": f"{threshold_values[i]:.4f}",
+            "Threshold": f"{threshold_values[i]:.5f}",
             "Accuracy": f"{result['accuracy']:.3f}",
             "Precision": f"{result['precision']:.3f}",
             "Recall": f"{result['recall']:.3f}",
+            "FPR": f"{result['fpr']:.3f}",
             "F1 Score": f"{result['f1_score']:.3f}",
             "Largest Group": f"{result['largest_fraud_group_size']}"
         })
     results_table.append({
-        "Threshold": f"Best ({threshold_values[best_threshold]:.4f})",
+        "Threshold": f"Best ({threshold_values[best_threshold]:.5f})",
         "Accuracy": f"{results[best_threshold]['accuracy']:.3f}",
         "Precision": f"{results[best_threshold]['precision']:.3f}",
         "Recall": f"{results[best_threshold]['recall']:.3f}",
+        "FPR": f"{results[best_threshold]['fpr']:.3f}",
         "F1 Score": f"{results[best_threshold]['f1_score']:.3f}",
         "Largest Group": f"{results[best_threshold]['largest_fraud_group_size']}"
 

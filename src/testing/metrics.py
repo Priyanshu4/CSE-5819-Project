@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, f1_score
 
 def evaluate_predictions(labels: np.ndarray, predictions: np.ndarray) -> dict:
     """
@@ -19,11 +19,19 @@ def evaluate_predictions(labels: np.ndarray, predictions: np.ndarray) -> dict:
     accuracy = accuracy_score(labels, predictions)
     precision = precision_score(labels, predictions)
     recall = recall_score(labels, predictions)
+    tn, fp, fn, tp = confusion_matrix(labels, predictions).ravel()
+    fpr = fp / (fp + tn)
     f1 = f1_score(labels, predictions)
     
     # Store results in a dictionary
     results = {
         'accuracy': accuracy,
+        'tn': tn,
+        'fp': fp,
+        'fn': fn,
+        'tp': tp,
+        'fpr': fpr,
+        'tpr': recall,
         'precision': precision,
         'recall': recall,
         'f1_score': f1,
