@@ -7,27 +7,6 @@ import logging
 from .metrics import evaluate_predictions
 import src.utils as utils
 
-def userwise_anomaly_scores(clusters, anomaly_scores, n_users):
-    """
-    Given a set a clusters and anomaly scores for each clusters, this computes anomaly scores for each user.
-    The anomaly score for a user is the highest anomaly score of any cluster it is in.
-    This indicates the threshold at which a user may be classified as fraud.
-
-    Arguments:
-        clusters (list): A list of lists of users (indices) in each cluster.
-        anomaly_scores (np.ndarray): An array of anomaly scores for each cluster.
-        n_users (int): number of users
-
-    Returns:
-        user_anomaly_scores (np.ndarray): An array of anomaly scores for each user
-    """
-    user_anomaly_scores = np.zeros(n_users)
-    for i, score in enumerate(anomaly_scores):
-        for user in clusters[i]:
-            if user_anomaly_scores[user] < score:
-                user_anomaly_scores[user] = score
-    return user_anomaly_scores
-
 def clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold: float, true_labels: np.array):
     """
     Detects fraud users using a list of candidate clusters and their anomaly scores.
@@ -50,6 +29,40 @@ def clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold: float, tr
             predicted_labels[clusters[i]] = 1
     return predicted_labels, cluster_labels
 
+
+def get_largest_fraudulent_cluster_size(clusters: list, cluster_labels: np.ndarray):
+    """
+    Gets the size of the largest fraudulent cluster.
+    """
+    largest_fraud_group_size = -1
+    for i, cluster in enumerate(clusters):
+        if cluster_labels[i] and len(cluster) > largest_fraud_group_size:
+            largest_fraud_group_size = len(cluster)
+    return largest_fraud_group_size
+
+def get_most_anomalous_group(clusters: list, anomaly_scores: np.ndarray):
+    """
+    Gets the index of the most anomalous cluster.
+    """
+    most_anomalous_group_index = -1
+    most_anomalous_group_score = -1
+    for i, score in enumerate(anomaly_scores):
+        if score > most_anomalous_group_score:
+            most_anomalous_group_score = score
+            most_anomalous_group_index = i
+    return most_anomalous_group_index
+
+def get_cluster_precision(cluster, true_labels: np.ndarray):
+    """
+    Gets the precision of a cluster.
+    This is the fraction of users in the cluster that are fraudulent.
+    """
+    n_fraud = 0
+    for user in cluster:
+        if true_labels[user]:
+            n_fraud += 1
+    return n_fraud / len(cluster)
+
 def test_clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold_values: list, true_labels: np.ndarray):
     """
     Tests the clust_anomaly_fraud_detection function over a series of threshold values.
@@ -69,11 +82,12 @@ def test_clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold_value
     best_f1 = -1
     for i, threshold in enumerate(threshold_values):
         predicted_labels, cluster_labels = clust_anomaly_fraud_detection(clusters, anomaly_scores, threshold, true_labels)
-        largest_fraud_group = max(range(len(cluster_labels)), 
-                                        key=lambda i: len(clusters[i]) if cluster_labels[i] == 1 else -1)
-        largest_fraud_group_size = len(clusters[largest_fraud_group])
         result = evaluate_predictions(true_labels, predicted_labels)
-        result["largest_fraud_group_size"] = largest_fraud_group_size
+        result["largest_fraud_group_size"] = get_largest_fraudulent_cluster_size(clusters, cluster_labels)
+        most_anomalous_group_index = get_most_anomalous_group(clusters, anomaly_scores)
+        result["most_anomalous_group_size"] = len(clusters[most_anomalous_group_index])
+        result["most_anomalous_group_score"] = anomaly_scores[most_anomalous_group_index]
+        result["most_anomalous_group_precision"] = get_cluster_precision(clusters[most_anomalous_group_index], true_labels)
         if result['f1_score'] > best_f1:
             best_f1 = result['f1_score']
             best_threshold = i
@@ -89,7 +103,7 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
         results (list): Output from test_clust_anomaly_fraud_detection.        
         best_threshold (int): The index of the threshold value with the best F1 score. Output from test_clust_anomaly_fraud_detection.
     """
-    headers = ["Threshold", "Accuracy", "Precision", "Recall", "FPR", "F1 Score", "Largest Group"]
+    headers = ["Threshold", "Accuracy", "Precision", "Recall", "FPR", "F1 Score", "Largest Group", "Top Group Size", "Top Group Precision"]
     results_table = []
     for i, result in enumerate(results):
         results_table.append({
@@ -99,7 +113,9 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
             "Recall": f"{result['recall']:.3f}",
             "FPR": f"{result['fpr']:.3f}",
             "F1 Score": f"{result['f1_score']:.3f}",
-            "Largest Group": f"{result['largest_fraud_group_size']}"
+            "Largest Group": f"{result['largest_fraud_group_size']}",
+            "Top Group Size": f"{result['most_anomalous_group_size']}",
+            "Top Group Precision": f"{result['most_anomalous_group_precision']:.3f}"
         })
     results_table.append({
         "Threshold": f"Best ({threshold_values[best_threshold]:.5f})",
@@ -108,8 +124,9 @@ def log_clust_anomaly_results(threshold_values, results, best_threshold, logger:
         "Recall": f"{results[best_threshold]['recall']:.3f}",
         "FPR": f"{results[best_threshold]['fpr']:.3f}",
         "F1 Score": f"{results[best_threshold]['f1_score']:.3f}",
-        "Largest Group": f"{results[best_threshold]['largest_fraud_group_size']}"
-
+        "Largest Group": f"{results[best_threshold]['largest_fraud_group_size']}",
+        "Top Group Size": f"{result['most_anomalous_group_size']}",
+        "Top Group Precision": f"{result['most_anomalous_group_precision']:.3f}"
     })
     utils.print_table(headers, results_table, logger.info)
     return results_table
