@@ -202,12 +202,23 @@ class GraphUser2ItemDataset(BasicDataset):
         
 class PickleDataset(GraphUser2ItemDataset):
     """ For loading dataset from a pickled u2i csr matrix and labels array.
+        Pickled labeled files should have 0s for non-fraudulent users and positive integers for fraudulent users.
+        The positive integers can represent different groups of fraudulent users if desired.
     """
     def __init__(self, u2i_pkl_path: Path, user_labels_pkl_path: Path):
         graph_u2i = pickle.load(open(u2i_pkl_path, "rb"))
-        labels = pickle.load(open(user_labels_pkl_path, "rb"))
+        self._labels_raw = pickle.load(open(user_labels_pkl_path, "rb"))
+        labels = np.where(self._labels_raw > 0, 1, 0) # Convert non-zero elements to 1 and zero elements to 0
         super().__init__(graph_u2i, labels)
         
+    @property
+    def raw_user_labels(self):
+        """ Gets the raw user labels as stored in the pickle file.
+            For some synthetic datasets, this may store extra information as to which group a fraudulent user belongs.
+            0 indicates non-fraudulent user, and a positive integer indicates that the user is fraudulent, belonging to the group denoted by the integer.
+        """
+        return self._labels_raw
+
 class YelpNycDataset(GraphUser2ItemDataset):
     """ Dataset for YelpNYC
         Contains additional metadata including star ratings, timestamps, user ids and product ids

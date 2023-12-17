@@ -2,18 +2,32 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.colors as colors
 from sklearn.manifold import TSNE
 
-def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None):
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+from pathlib import Path
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+from pathlib import Path
+
+def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None, title=None):
     """
     Saves a plot of the embeddings to the given path. 
     Embeddings are colored according to the labels.
-    If the embeddings hav more than 2 dimensions, they will be reduced to 2 dimensions using TSNE.
+    If the embeddings have more than 2 dimensions, they will be reduced to 2 dimensions using TSNE.
 
     Arguments:
         embeddings -- array of embeddings to plot with shape (n_users, n_features)
-        labels -- array of labels with shape (n_users,) where 0 is genuine and 1 is fraud
+        labels -- array of labels with shape (n_users,) where 0 is genuine and a positive integer is fraud
+                  if there are only two labels (0 and 1), 0 is labeled as 'Genuine' and 1 as 'Fraudulent'
+                  if there are more than two labels, 0 is 'Genuine' and each positive integer is a different 'Fraud Group'
         path -- path to save the plot to
+        title -- title of the plot
     """
     users, features = np.shape(embeddings)
 
@@ -21,26 +35,41 @@ def plot_embeddings(embeddings: np.array, labels: np.array, path: Path = None):
         tsne = TSNE(n_components=2)
         embeddings = tsne.fit_transform(embeddings)
 
-    mask = labels == 0
+    unique_labels = np.unique(labels)
+    n_unique_labels = len(unique_labels)
+  
+    if n_unique_labels <= 2:
+        pallete = colors.ListedColormap(["green", "red"])
+    elif n_unique_labels <= 5:
+        pallete = colors.ListedColormap(["green", "red", "blue", "orange", "purple"])
+    elif n_unique_labels <= 10:
+        pallete = plt.cm.get_cmap('tab10', n_unique_labels)
+    elif n_unique_labels <= 20:
+        pallete = plt.cm.get_cmap('tab20', n_unique_labels)
+    else:
+        raise NotImplementedError("Plotting embeddings with more than 20 seperate labels is not yet supported.")
 
     plt.figure(figsize=(10, 8))
-    plt.scatter(embeddings[:, 0], embeddings[:, 1], c=mask, cmap='RdYlGn')
 
-    plt.title('User Embeddings with True Labels')
-
-    if features > 2:
-        plt.xlabel('TSNE Component 1')
-        plt.ylabel('TSNE Component 2')
+    if n_unique_labels > 1:
+        for i, label in enumerate(unique_labels):
+            mask = labels == label
+            if n_unique_labels == 2 and label == 1:
+                label_name = 'Fraudulent'
+            elif label == 0:
+                label_name = 'Genuine'
+            else:
+                label_name = f'Fraud Group {label}'
+            
+            plt.scatter(embeddings[mask, 0], embeddings[mask, 1], color=pallete(i / (n_unique_labels - 1)), label=label_name)
+        plt.legend()
     else:
-        plt.xlabel('Latent Space Component 1')
-        plt.ylabel('Latent Space Component 2')   
+        plt.scatter(embeddings[:, 0], embeddings[:, 1], color=pallete(0))
 
-    # Add legend
-    plt.legend(handles=[plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='g', markersize=8),
-                            plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='r', markersize=8)],
-                labels=['Genuine', 'Fraud'])
+    plt.title('User Embeddings' if title is None else title)
+    plt.xlabel('TSNE Component 1' if features > 2 else 'Latent Space Component 1')
+    plt.ylabel('TSNE Component 2' if features > 2 else 'Latent Space Component 2')
 
-    
     if path is not None:
         plt.savefig(path)
         plt.close()
