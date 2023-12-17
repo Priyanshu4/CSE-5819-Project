@@ -1,4 +1,5 @@
 /data/yelpnyc/yelpnyc/
 /results
+/jobs
 *.pyc
 .DS_Store

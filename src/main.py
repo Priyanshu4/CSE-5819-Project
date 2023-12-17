@@ -15,7 +15,7 @@ if cwd != Path(__file__).parent.parent:
     raise RuntimeError(f"Please run this script from the project root.\n" + 
                        f"Use command python -m src.main in directory {Path(__file__).parent.parent.resolve()}")
 
-from src.dataloader import DataLoader, YelpNycDataset
+from src.dataloader import DataLoader, YelpNycDataset, PickleDataset
 from src.config import DATASETS_CONFIG_PATH, get_results_path, get_logger
 import src.utils as utils
 
@@ -148,29 +148,42 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
 
         elif args.clustering == "hclust":
             logger.info(f"Clustering with hierarchical clustering ({args.linkage} linkage) and anomaly scores for fraud detection.")
-        
-            max_group_size = 60000
-            split_groups, group_indices = split.split_matrix_kmeans(user_embs, max_group_size=max_group_size)
-            mappings = split.build_group_split_mappings(split_groups, group_indices)
-            logger.info(f"Split {n_users} into {len(split_groups)} with max size {max_group_size}.")
-
             anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
+            max_hclustering_size = 200000
 
-            clusters = []
-            anomaly_scores = []
+            if n_users < max_hclustering_size:
 
-            for i, group in enumerate(split_groups):
+                split_groups, group_indices = split.split_matrix_kmeans(user_embs, max_group_size=max_hclustering_size)
+                mappings = split.build_group_split_mappings(split_groups, group_indices)
+                logger.info(f"Split {n_users} into {len(split_groups)} with max size {max_hclustering_size}.")
 
-                logger.info(f"Clustering group {i} ({len(group)} users)")
+
+                clusters = []
+                anomaly_scores = []
+
+                for i, group in enumerate(split_groups):
+
+                    logger.info(f"Clustering group {i} ({len(group)} users)")
+                    with utils.timer(name="linkages"):
+                        hclust = HClust(group)
+                        linkage = hclust.generate_linkage_matrix(method=args.linkage)
+
+                    logger.info(f"Computing anomaly scores for group {i}")
+                    with utils.timer(name="anomaly_scores"):
+                        group_clusters, group_anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage, mappings[i])
+                        clusters.extend(g.users for g in group_clusters)
+                        anomaly_scores.extend(group_anomaly_scores)
+
+                anomaly_scores = np.array(anomaly_scores)
+
+            else:
                 with utils.timer(name="linkages"):
-                    hclust = HClust(group)
+                    hclust = HClust(user_embs)
                     linkage = hclust.generate_linkage_matrix(method=args.linkage)
 
-                logger.info(f"Computing anomaly scores for group {i}")
                 with utils.timer(name="anomaly_scores"):
-                    group_clusters, group_anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage, mappings[i])
-                    clusters.extend(g.users for g in group_clusters)
-                    anomaly_scores.extend(group_anomaly_scores)
+                    anomaly_groups, anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage, mappings[i])
+                    clusters = [g.users for g in anomaly_groups]
 
             time_info = utils.timer.formatted_tape_str(select_keys=["linkages", "anomaly_scores"])
             logger.info(f"Clustering Time: {time_info}")
@@ -291,7 +304,10 @@ if __name__ == "__main__":
 
     if args.plot:
         embeddings_plot_save_file = results_path / "embeddings.png"
-        plot_embeddings(user_embs, dataset.user_labels, embeddings_plot_save_file)
+        if type(dataset) == PickleDataset:
+            plot_embeddings(user_embs, dataset.raw_user_labels, embeddings_plot_save_file)
+        else:
+            plot_embeddings(user_embs, dataset.user_labels, embeddings_plot_save_file)
         logger.info(f"Saved embeddings plot to {embeddings_plot_save_file}")
 
     clustering_main(args, dataset, user_embs, results_path, logger)
