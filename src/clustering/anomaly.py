@@ -3,7 +3,6 @@ import pandas as pd
 from src.dataloader import BasicDataset
 from src.similarity import UserSimilarity
 from bitarray import bitarray
-
 import src.utils as utils
 
 
@@ -164,15 +163,19 @@ class AnomalyGroup:
 
         return group
     
-    def _penalty_function(self):
+    def _penalty_function(self, beta=0.15):
         """
         Generates penalty function a group of users.
         Penalizes smaller groups because they are less likely to be a fake review farm.
 
         OUTPUTS:
-            L_g (float) - penalty for the group
+            L_g (float) - penalty for the group.
+            beta (float) - hyperparameter for the penalty function.
+                           beta affects the stretch of the sigmoid function.
+                           a smaller beta means the sigmoid function is more stretched, so larger groups are also penalized
+                           and smaller groups are penalized even more.
         """
-        self.penalty = 1 / (1 + np.e**(-1 * (self.n_users + self.n_total_products_reviewed - 3)))
+        self.penalty = 1 / (1 + np.e**(-1 * (beta * (self.n_users + self.n_total_products_reviewed) - 3)))
         return self.penalty
 
     def _review_tightness(self):
@@ -182,6 +185,8 @@ class AnomalyGroup:
         OUTPUTS:
             RT_g (float) - review tightness for the group
         """
+        if self.n_total_products_reviewed == 0:
+            return 0
         RT_g = (self.n_total_reviews) / (self.n_users * self.n_total_products_reviewed)
         return RT_g
 
@@ -237,25 +242,26 @@ class AnomalyGroup:
         NT_g = self._average_jaccard()
         return NT_g
     
-    def group_anomaly_compactness(self, enable_penalty: bool = False):
+    def group_anomaly_compactness(self, enable_penalty: bool = False, beta: float = 0.15):
         """
         Generates group anomaly compactness for a group of users.
 
         INPUTS:
             group (arr) - list of users in the group
             enable_penalty (bool) - boolean indicating whether to enable penalty for smaller groups
+            beta (float) - hyperparameter for the penalty function
 
         OUTPUTS:
             Pi_g (float) - group anomaly compactness for the group
         """
         if enable_penalty:
-            self._penalty_function()
+            self._penalty_function(beta=beta)
         else:
             self.penalty = 1
         RT_g = self._review_tightness()
         PT_g = self._product_tightness()
         NT_g = self._neighbor_tightness()
-        Pi_g = self.penalty * AnomalyScorer.weighted_harmonic_mean(np.array([RT_g, PT_g, NT_g]), np.array([1/4, 1/4, 1/2]))
+        Pi_g = self.penalty * RT_g * PT_g * NT_g
         return Pi_g    
     
     def __len__(self):
@@ -264,7 +270,7 @@ class AnomalyGroup:
 class AnomalyScorer:
 
     def __init__(self, dataset: BasicDataset, enable_penalty: bool, use_metadata: bool = True, burstness_threshold: int = 30, 
-                 max_group_size: int = 5000):
+                 max_group_size: int = 5000, beta: float = 0.15):
         """
         Initializes AnomalyScorer object.
         
@@ -275,6 +281,7 @@ class AnomalyScorer:
             burstness_threshold (int) - minimum number of days user must be active for to have 0 burstness score
             max_group_size (int) - if a group is greater than this size, we say it cannot be fraudulent and give it 0 anomaly score
                                    even if a fraud group of this size exists, it should be caught by smaller sub-groups
+            beta (float) - hyperparameter for the penalty function
         """
         self.dataset = dataset
         self.enable_penalty = enable_penalty
@@ -282,6 +289,7 @@ class AnomalyScorer:
         self.burstness_threshold = burstness_threshold
         self.user_simi = UserSimilarity(dataset.graph_u2i)
         self.max_group_size = max_group_size
+        self.beta = beta
 
         if use_metadata:
             self.avg_ratings = dataset.metadata_df.groupby(dataset.METADATA_ITEM_ID)[dataset.METADATA_STAR_RATING].mean()
@@ -323,10 +331,10 @@ class AnomalyScorer:
             group_mean_avrd = np.mean(self.avrd[group.users]) / 5 # divide by 5 to normalize (max 5 star rating difference)
             group_mean_burstness = np.mean(self.burstness[group.users])
             score = AnomalyScorer.weighted_geometric_mean(
-                np.array([group.group_anomaly_compactness(self.enable_penalty), group_mean_avrd, group_mean_burstness]), 
+                np.array([group.group_anomaly_compactness(self.enable_penalty, self.beta), group_mean_avrd, group_mean_burstness]), 
                 np.array([4/5, 1/10, 1/10]))
         else:
-            score = group.group_anomaly_compactness(self.enable_penalty)
+            score = group.group_anomaly_compactness(self.enable_penalty, self.beta)
         return score
 
 
@@ -412,6 +420,50 @@ class AnomalyScorer:
 
         return groups, anomaly_scores
 
+    @staticmethod
+    def userwise_anomaly_scores(clusters, anomaly_scores, n_users):
+        """
+        Given a set a clusters and anomaly scores for each clusters, this computes anomaly scores for each user.
+        The anomaly score for a user is the highest anomaly score of any cluster it is in.
+        This indicates the threshold at which a user may be classified as fraud.
+
+        Arguments:
+            clusters (list): A list of lists of users (indices) in each cluster.
+            anomaly_scores (np.ndarray): An array of anomaly scores for each cluster.
+            n_users (int): number of users
+
+        Returns:
+            user_anomaly_scores (np.ndarray): An array of anomaly scores for each user
+        """
+        user_anomaly_scores = np.zeros(n_users)
+        for i, score in enumerate(anomaly_scores):
+            for user in clusters[i]:
+                if user_anomaly_scores[user] < score:
+                    user_anomaly_scores[user] = score
+        return user_anomaly_scores
+    
+    @staticmethod
+    def filter_small_groups(clusters, anomaly_scores, min_group_size):
+        """
+        Given a set a clusters and anomaly scores for each clusters, this returns a filtered version which only contains more users than min_group_size.
+
+        Arguments:
+            clusters (list): A list of lists of users (indices) in each cluster.
+            anomaly_scores (np.ndarray): An array of anomaly scores for each cluster.
+            min_group_size (int): minimum group size
+
+        Returns:
+            filtered_clusters (list): A list of lists of users (indices) in each cluster.
+            filtered_anomaly_scores (np.ndarray): An array of anomaly scores for each cluster.
+        """
+        filtered_clusters = []
+        filtered_scores = []
+        for i, cluster in enumerate(clusters):
+            if len(cluster) < min_group_size:
+                filtered_clusters.append(cluster)
+                filtered_scores.append(anomaly_scores[i])
+        filtered_anomaly_scores = np.array(filtered_scores)
+        return filtered_clusters, filtered_anomaly_scores
 
     @staticmethod
     def weighted_geometric_mean(scores: np.ndarray, weights: np.ndarray):
