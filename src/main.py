@@ -31,7 +31,7 @@ from src.clustering.anomaly import AnomalyScorer
 from src.clustering import split
 
 from src.testing.dbscan import test_optics_dbscan_fraud_detection, log_dbscan_results
-from src.testing.clust_anomaly import (test_clust_anomaly_fraud_detection, log_clust_anomaly_results, userwise_anomaly_scores)
+from src.testing.clust_anomaly import (clust_anomaly_fraud_detection, test_clust_anomaly_fraud_detection, log_clust_anomaly_results)
 
 
 def embedding_main(args, dataset, results_path, logger):
@@ -77,7 +77,7 @@ def embedding_main(args, dataset, results_path, logger):
         loss = BPRLoss(device, dataset, weight_decay=train_config.weight_decay)
         train_lightgcn = training.train_lightgcn_bpr_loss
     elif args.loss == "simi":
-        loss = SimilarityLoss(device, dataset, n_pos=10, n_neg=15, fast_sampling=args.fast_simi)
+        loss = SimilarityLoss(device, dataset, n_pos=10, n_neg=10, fast_sampling=args.fast_simi)
         if loss.fast_sampling:
             logger.info(f"Adjusted n_pos {loss.n_pos}, n_neg {loss.n_neg}")
         train_lightgcn = training.train_lightgcn_simi_loss
@@ -124,8 +124,7 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
             logger.info("Clustering with HDBSCAN for hieararchical with density and anomaly score based fraud detection.")
 
             with utils.timer(name="clustering"):
-                min_cluster_size = 100
-                hdbscan_clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size)
+                hdbscan_clusterer = hdbscan.HDBSCAN(min_cluster_size=args.min_size)
                 hdbscan_clusterer.fit(user_embs)
 
             with utils.timer(name="plotting"):
@@ -149,9 +148,9 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
         elif args.clustering == "hclust":
             logger.info(f"Clustering with hierarchical clustering ({args.linkage} linkage) and anomaly scores for fraud detection.")
             anomaly_scorer = AnomalyScorer(dataset, enable_penalty=True, use_metadata=use_metadata, burstness_threshold=args.tau)
-            max_hclustering_size = 200000
+            max_hclustering_size = 60000 # Hierarchical clustering is memory inefficient, so we cap it at 60000 per run
 
-            if n_users < max_hclustering_size:
+            if n_users > max_hclustering_size:
 
                 split_groups, group_indices = split.split_matrix_kmeans(user_embs, max_group_size=max_hclustering_size)
                 mappings = split.build_group_split_mappings(split_groups, group_indices)
@@ -182,13 +181,14 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
                     linkage = hclust.generate_linkage_matrix(method=args.linkage)
 
                 with utils.timer(name="anomaly_scores"):
-                    anomaly_groups, anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage, mappings[i])
+                    anomaly_groups, anomaly_scores = anomaly_scorer.hierarchical_anomaly_scores(linkage)
                     clusters = [g.users for g in anomaly_groups]
 
             time_info = utils.timer.formatted_tape_str(select_keys=["linkages", "anomaly_scores"])
             logger.info(f"Clustering Time: {time_info}")
             utils.timer.zero(select_keys=["linkages", "anomaly_scores"])
 
+        clusters, anomaly_scores = AnomalyScorer.filter_small_groups(clusters, anomaly_scores, args.min_size)
         max_anomaly_score = np.max(anomaly_scores)
         scale_factor = 1 if max_anomaly_score <= 1 else 1 / max_anomaly_score
         scaled_anomaly_scores = anomaly_scores * scale_factor
@@ -202,19 +202,6 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
         logger.info(f"\tstd={np.std(scaled_anomaly_scores)}")
 
 
-        if args.plot:
-            anomaly_score_plot_path = results_path / "anomaly_scores.png"
-            user_anomaly_scores = userwise_anomaly_scores(clusters, scaled_anomaly_scores, n_users)
-            plot_embeddings_with_anomaly_scores(user_embs, user_anomaly_scores, anomaly_score_plot_path)
-            logger.info(f"Saved anomaly score plot to {anomaly_score_plot_path}")
-
-            roc_curve_plot_path = results_path / "roc.png"
-            roc = RocCurveDisplay.from_predictions(dataset.user_labels, user_anomaly_scores, name = "ROC Curve")
-            roc.plot()
-            plt.savefig(roc_curve_plot_path)
-            plt.close()
-            logger.info(f"Saved ROC curve plot to {roc_curve_plot_path}")
-    
         thresholds = np.concatenate((np.linspace(0, 0.9, 9, endpoint=False),
                                      np.linspace(0.9, 0.99, 9, endpoint=False),
                                      np.linspace(0.99, 0.999, 9, endpoint=False),
@@ -224,6 +211,28 @@ def clustering_main(args, dataset, user_embs, results_path, logger):
         results, best = test_clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, thresholds, dataset.user_labels)
         log_clust_anomaly_results(thresholds, results, best, logger)
 
+        if args.plot:
+            anomaly_score_plot_path = results_path / "anomaly_scores.png"
+            user_anomaly_scores = AnomalyScorer.userwise_anomaly_scores(clusters, scaled_anomaly_scores, n_users)
+            plot_embeddings_with_anomaly_scores(user_embs, user_anomaly_scores, anomaly_score_plot_path)
+            logger.info(f"Saved anomaly score plot to {anomaly_score_plot_path}")
+
+            best_threshold = thresholds[best]
+            best_threshold_plot = results_path / f"threshold_{best_threshold:.4f}.png"
+            predicted_labels, _ = clust_anomaly_fraud_detection(clusters, scaled_anomaly_scores, best_threshold, dataset.user_labels)
+            plot_embeddings(user_embs, predicted_labels, best_threshold_plot, title=f"Predictions with Threshold {best_threshold:.4f}")
+            logger.info(f"Saved embeddings plot with best threshold {best_threshold} to {best_threshold_plot}")
+
+            roc_curve_plot_path = results_path / "roc.png"
+            roc = RocCurveDisplay.from_predictions(dataset.user_labels, user_anomaly_scores, name = "ROC Curve")
+            roc.plot()
+            plt.savefig(roc_curve_plot_path)
+            plt.close()
+            logger.info(f"Saved ROC curve plot to {roc_curve_plot_path}")
+
+
+
+    
     elif args.clustering == "dbscan":
         logger.info("Clustering with DBSCAN for density based fraud detection.")
         epsilon_values = [0.0001, 0.001, 0.01, 0.1, 1, 5, 10]
@@ -269,6 +278,7 @@ if __name__ == "__main__":
     parser.add_argument("--clustering", type=str, default="hclust", help="The clustering algorithm to use. Options: hclust, hdbscan, dbscan, none")
     parser.add_argument("--linkage", type=str, default="ward", help="The linkage to use in hierarchical clustering. Options: single, average, ward")
     parser.add_argument("--no_metadata", action="store_false", dest="metadata", help="Do not use metadata in anomaly score computation.")
+    parser.add_argument("--min_size", type=int, default=20, help="The minimum size for a group of users to be fraudulent.")
     parser.add_argument("--tau", type=float, default=30, help="The threshold for burstness for anomaly score computation in units of days.")
  
     args = parser.parse_args()
