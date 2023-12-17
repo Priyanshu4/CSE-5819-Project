@@ -1,8 +1,0 @@
-conda create -n fake-review-group-detection python=3.10
-conda activate fake-review-group-detection 
-conda install -c conda-forge hdbscan
-conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
-conda install scipy
-conda install scikit-learn
-conda install seaborn
-conda install bitarray
