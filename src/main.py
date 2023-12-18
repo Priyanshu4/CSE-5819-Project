@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
     # General arguments
     parser.add_argument("--name", type=str, default="", help="The experiment name for the results folder.")
-    parser.add_argument("--dataset", type=str, default="yelpnyc", help=f"available datasets: {dataloader.dataset_names}")
+    parser.add_argument("--dataset", type=str, required=True, help=f"available datasets: {dataloader.dataset_names}")
     parser.add_argument("--seed", type=int, default=5819, help="random seed")
     parser.add_argument("--plot", action="store_true", help="save plots to results folder")
     parser.add_argument("--no_plot", action="store_false", dest="plot", help="save plots to results folder")
