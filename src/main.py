@@ -257,7 +257,7 @@ if __name__ == "__main__":
 
     # Arguments for embedding and LightGCN
     parser.add_argument("--embeddings", type=str, default="", help="The path to the embeddings file. If given, training is skipped and clustering is done directly.")
-    parser.add_argument("--epochs", type=int, default=100, help="the epochs for training")
+    parser.add_argument("--epochs", type=int, default=500, help="the epochs for training")
     parser.add_argument("--batch_size", type=int, default=2048, help="the batch size for training procedure")
     parser.add_argument("--dim", type=int, default=16, help="the embedding size of lightGCN")
     parser.add_argument("--layer", type=int, default=3, help="the layer num of lightGCN")
