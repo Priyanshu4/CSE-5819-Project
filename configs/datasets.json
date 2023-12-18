@@ -15,20 +15,12 @@
                 "metadata": "../data/yelpnyc/yelpnyc/metadata.csv"
             }
         },
-        "synthetic_easy_1000": {
+        "synthetic_10k": {
             "dataset_type": "pickle",
             "pickle_protocol": 4,
             "filepaths": {
-                "graph_u2i": "../data/synthetic/synthetic_easy_1000/graph_u2i.pkl",
-                "labels": "../data/synthetic/synthetic_easy_1000/labels.pkl"
-            }
-        },
-        "synthetic_mid_10k": {
-            "dataset_type": "pickle",
-            "pickle_protocol": 4,
-            "filepaths": {
-                "graph_u2i": "../data/synthetic/synthetic_mid_10k/graph_u2i.pkl",
-                "labels": "../data/synthetic/synthetic_mid_10k/labels.pkl"
+                "graph_u2i": "../data/synthetic/synthetic_10k/graph_u2i.pkl",
+                "labels": "../data/synthetic/synthetic_10k/labels.pkl"
             }
         }
     }
